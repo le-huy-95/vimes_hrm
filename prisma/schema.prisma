@@ -38,6 +38,18 @@ enum SyncLogStatus {
   failed
 }
 
+enum GithubAccountType {
+  Organization
+  User
+}
+
+enum GithubDeliveryStatus {
+  accepted
+  processed
+  ignored
+  failed
+}
+
 model Organization {
   id        String   @id @default(cuid())
   name      String
@@ -50,6 +62,7 @@ model Organization {
   googleWorkspaceSyncs GoogleWorkspaceSync[]
   googleGroupTeamMaps GoogleGroupTeamMap[]
   syncLogs            SyncLog[]
+  githubConnections GithubConnection[]
 
   @@map("organizations")
 }
@@ -71,6 +84,7 @@ model User {
   oauthConnections  OauthConnection[]
   auditLogs         AuditLog[]        @relation("AuditActor")
   googleWorkspaceLinks GoogleWorkspaceSync[]
+  githubConnectionsConnected GithubConnection[] @relation("GithubConnectedBy")
 
   @@index([orgId])
   @@map("users")
@@ -104,6 +118,9 @@ model Team {
   children Team[]       @relation("TeamTree")
   members  TeamMember[]
   googleGroupMaps GoogleGroupTeamMap[]
+  githubConnection GithubConnection?
+  githubRepos      GithubRepo[]
+  githubActivity  GithubActivityEvent[]
 
   @@index([orgId])
   @@index([parentTeamId])
@@ -231,4 +248,82 @@ model SyncLog {
 
   @@index([orgId, runAt(sort: Desc)])
   @@map("sync_logs")
+}
+
+model GithubConnection {
+  id                 String            @id @default(cuid())
+  teamId             String            @unique @map("team_id")
+  orgId              String            @map("org_id")
+  installationId     BigInt            @map("installation_id")
+  githubAccountLogin String            @map("github_account_login")
+  githubAccountType  GithubAccountType @map("github_account_type")
+  githubTeamId       BigInt?           @map("github_team_id")
+  connectedByUserId  String?           @map("connected_by_user_id")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+
+  team        Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  connectedBy User?        @relation("GithubConnectedBy", fields: [connectedByUserId], references: [id])
+  repos       GithubRepo[]
+
+  @@index([installationId])
+  @@index([orgId])
+  @@map("github_connections")
+}
+
+model GithubRepo {
+  id            String    @id @default(cuid())
+  teamId        String    @map("team_id")
+  connectionId  String    @map("connection_id")
+  githubRepoId  BigInt    @map("github_repo_id")
+  fullName      String    @map("full_name")
+  defaultBranch String?   @map("default_branch")
+  private       Boolean   @default(false)
+  htmlUrl       String    @map("html_url")
+  lastSyncedAt  DateTime? @map("last_synced_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  team       Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  connection GithubConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  activity   GithubActivityEvent[]
+
+  @@unique([teamId, githubRepoId])
+  @@index([teamId])
+  @@index([connectionId])
+  @@map("github_repos")
+}
+
+model GithubWebhookDelivery {
+  id          String               @id @default(cuid())
+  deliveryId  String               @unique @map("delivery_id")
+  event       String
+  action      String?
+  receivedAt  DateTime             @default(now()) @map("received_at")
+  processedAt DateTime?            @map("processed_at")
+  status      GithubDeliveryStatus @default(accepted)
+
+  @@map("github_webhook_deliveries")
+}
+
+model GithubActivityEvent {
+  id          String   @id @default(cuid())
+  teamId      String   @map("team_id")
+  repoId      String?  @map("repo_id")
+  eventType   String   @map("event_type")
+  action      String?
+  actorLogin  String?  @map("actor_login")
+  title       String
+  externalUrl String?  @map("external_url")
+  occurredAt  DateTime @map("occurred_at")
+  dedupeKey   String   @unique @map("dedupe_key")
+  meta        Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  team Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  repo GithubRepo? @relation(fields: [repoId], references: [id], onDelete: SetNull)
+
+  @@index([teamId, occurredAt(sort: Desc)])
+  @@map("github_activity_events")
 }
