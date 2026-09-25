@@ -1,12 +1,27 @@
 /**
  * Điểm vào ứng dụng API.
- * Tạo Express app rồi lắng nghe cổng từ biến môi trường.
+ * Tạo Express app rồi lắng nghe cổng từ biến môi trường,
+ * đồng thời khởi động BullMQ worker cho Google Workspace sync.
  */
 import { createApp } from "./app.js";
 import { env } from "./lib/env.js";
+import { container } from "./container.js";
+import { startWorkspaceSyncWorker } from "./workers/google-workspace.worker.js";
 
 const app = createApp();
 
-app.listen(env.PORT, () => {
+const server = app.listen(env.PORT, () => {
   console.log(`API listening on http://localhost:${env.PORT}`);
 });
+
+const worker = startWorkspaceSyncWorker(container.services.workspaceSync);
+
+async function shutdown(signal: string) {
+  console.log(`received ${signal}, shutting down…`);
+  await worker.close();
+  server.close();
+  process.exit(0);
+}
+
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));
