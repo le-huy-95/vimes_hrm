@@ -7,9 +7,14 @@ import 'package:manage_teams_app/core/network/auth_interceptor.dart';
 import 'package:manage_teams_app/core/network/dio_client.dart';
 import 'package:manage_teams_app/core/storage/token_store.dart';
 import 'package:manage_teams_app/data/repositories/auth_repository_impl.dart';
+import 'package:manage_teams_app/data/repositories/org_repository_impl.dart';
+import 'package:manage_teams_app/data/repositories/team_repository_impl.dart';
 import 'package:manage_teams_app/domain/repositories/auth_repository.dart';
+import 'package:manage_teams_app/domain/repositories/org_repository.dart';
+import 'package:manage_teams_app/domain/repositories/team_repository.dart';
 import 'package:manage_teams_app/features/auth/bloc/auth_bloc.dart';
 import 'package:manage_teams_app/features/auth/bloc/auth_event.dart';
+import 'package:manage_teams_app/features/shell/bloc/shell_cubit.dart';
 
 class ManageTeamsApp extends StatefulWidget {
   const ManageTeamsApp({super.key});
@@ -21,7 +26,10 @@ class ManageTeamsApp extends StatefulWidget {
 class _ManageTeamsAppState extends State<ManageTeamsApp> {
   late final TokenStore _tokenStore;
   late final AuthRepository _authRepository;
+  late final TeamRepository _teamRepository;
+  late final OrgRepository _orgRepository;
   late final AuthBloc _authBloc;
+  late final ShellCubit _shellCubit;
   late final AppRouter _appRouter;
 
   @override
@@ -29,6 +37,9 @@ class _ManageTeamsAppState extends State<ManageTeamsApp> {
     super.initState();
     _tokenStore = SecureTokenStore();
     _authRepository = AuthRepositoryImpl(tokenStore: _tokenStore);
+    _teamRepository = TeamRepositoryImpl();
+    _orgRepository = OrgRepositoryImpl();
+    _shellCubit = ShellCubit(teamRepository: _teamRepository);
 
     final dio = DioClient.instance;
     late final AuthBloc authBloc;
@@ -52,6 +63,7 @@ class _ManageTeamsAppState extends State<ManageTeamsApp> {
   @override
   void dispose() {
     _authBloc.close();
+    _shellCubit.close();
     super.dispose();
   }
 
@@ -60,10 +72,15 @@ class _ManageTeamsAppState extends State<ManageTeamsApp> {
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider<AuthRepository>.value(value: _authRepository),
+        RepositoryProvider<TeamRepository>.value(value: _teamRepository),
+        RepositoryProvider<OrgRepository>.value(value: _orgRepository),
         RepositoryProvider<TokenStore>.value(value: _tokenStore),
       ],
-      child: BlocProvider<AuthBloc>.value(
-        value: _authBloc,
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider<AuthBloc>.value(value: _authBloc),
+          BlocProvider<ShellCubit>.value(value: _shellCubit),
+        ],
         child: MaterialApp.router(
           title: 'Manage Teams',
           debugShowCheckedModeBanner: false,
