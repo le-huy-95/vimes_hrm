@@ -58,7 +58,7 @@ function formatApiError(data: unknown, fallback: string): string {
     return body.details
       .map((issue) => {
         const path = issue.path?.length ? `${issue.path.join(".")}: ` : "";
-        return `${path}${issue.message ?? "Invalid"}`;
+        return `${path}${issue.message ?? "Không hợp lệ"}`;
       })
       .join("; ");
   }
@@ -73,7 +73,7 @@ function formatApiError(data: unknown, fallback: string): string {
     return (body.error as { message: string }).message;
   }
 
-  return fallback || "Request failed";
+  return fallback || "Yêu cầu thất bại";
 }
 
 async function tryRefresh(): Promise<boolean> {
@@ -108,6 +108,8 @@ export type Team = {
   name: string;
   description: string | null;
   createdAt: string;
+  /** Tên thành viên (có khi lấy từ GET /teams hoặc ?as=tree) */
+  memberNames?: string[];
   children?: Team[];
 };
 

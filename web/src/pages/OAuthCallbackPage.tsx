@@ -25,7 +25,7 @@ export function OAuthCallbackPage() {
 
   return (
     <div className="auth-page">
-      <p className="muted">Completing Google sign-in…</p>
+      <p className="muted">Đang hoàn tất đăng nhập Google…</p>
     </div>
   );
 }
