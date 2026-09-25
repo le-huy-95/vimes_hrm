@@ -1,7 +1,7 @@
 # Phase 7 Design — Team Dashboard Aggregation
 
 **Date:** 2026-09-25  
-**Status:** Approved; implementing  
+**Status:** Implemented  
 **Depends on:** Phases 1–6 (teams, tasks, github activity, chat)  
 **Scope:** **A** — API only `GET /teams/:teamId/dashboard` + Redis TTL cache 60s. No UI, no materialized view.
 

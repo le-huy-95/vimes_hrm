@@ -41,6 +41,7 @@ import { ProjectService } from "./services/project.service.js";
 import { FileService } from "./services/file.service.js";
 import { TaskService } from "./services/task.service.js";
 import { ChatService } from "./services/chat.service.js";
+import { DashboardService } from "./services/dashboard.service.js";
 import { AuthController } from "./controllers/auth.controller.js";
 import { OrgController } from "./controllers/org.controller.js";
 import { TeamController } from "./controllers/team.controller.js";
@@ -49,6 +50,7 @@ import { ProjectController } from "./controllers/project.controller.js";
 import { FileController } from "./controllers/file.controller.js";
 import { TaskController } from "./controllers/task.controller.js";
 import { ChatController } from "./controllers/chat.controller.js";
+import { DashboardController } from "./controllers/dashboard.controller.js";
 import { GithubTeamController } from "./controllers/github-team.controller.js";
 import { GithubWebhookController } from "./controllers/github-webhook.controller.js";
 
@@ -166,6 +168,13 @@ const chatService = new ChatService(
   fileRepository,
 );
 
+const dashboardService = new DashboardService(
+  prisma,
+  teamRepository,
+  channelRepository,
+  githubConnectionRepository,
+);
+
 // --- Tầng Controller: nhận request, trả response ---
 export const authController = new AuthController(authService);
 export const orgController = new OrgController(orgService);
@@ -185,6 +194,7 @@ export const projectController = new ProjectController(projectService);
 export const taskController = new TaskController(taskService);
 export const fileController = new FileController(fileService);
 export const chatController = new ChatController(chatService);
+export const dashboardController = new DashboardController(dashboardService);
 
 /** Object gom toàn bộ dependency — tiện debug / test sau này. */
 export const container = {
@@ -225,6 +235,7 @@ export const container = {
     task: taskService,
     file: fileService,
     chat: chatService,
+    dashboard: dashboardService,
   },
   controllers: {
     auth: authController,
@@ -237,5 +248,6 @@ export const container = {
     task: taskController,
     file: fileController,
     chat: chatController,
+    dashboard: dashboardController,
   },
 };

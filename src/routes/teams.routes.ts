@@ -7,6 +7,7 @@
 import { Router } from "express";
 import {
   chatController,
+  dashboardController,
   fileController,
   githubTeamController,
   projectController,
@@ -28,6 +29,12 @@ teamsRouter.use(authenticateJWT);
 
 teamsRouter.get("/", teamController.list);
 teamsRouter.post("/", teamController.create);
+
+teamsRouter.get(
+  "/:teamId/dashboard",
+  requireTeamPermission("team:view"),
+  dashboardController.get,
+);
 
 // Chat
 teamsRouter.get(

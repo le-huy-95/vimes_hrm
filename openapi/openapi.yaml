@@ -332,6 +332,19 @@ paths:
       responses:
         "200":
           description: OK
+  /teams/{teamId}/dashboard:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: Aggregated team dashboard (members, tasks, github, chat); Redis TTL 60s
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+        - in: query
+          name: refresh
+          schema: { type: string, enum: ["1", "true"] }
+          description: Bypass cache
+      responses:
+        "200":
+          description: OK
   /teams/{teamId}/channels:
     get:
       security: [{ bearerAuth: [] }]
