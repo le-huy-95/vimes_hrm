@@ -14,6 +14,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1140.0",
+    "@aws-sdk/s3-request-presigner": "^3.1140.0",
     "@prisma/client": "^6.15.0",
     "bcryptjs": "^3.0.2",
     "bullmq": "^6.3.8",
@@ -25,6 +27,7 @@
     "helmet": "^8.1.0",
     "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.2",
+    "sharp": "^0.35.4",
     "zod": "^4.1.5"
   },
   "prisma": {
