@@ -9,6 +9,8 @@ import type { GithubConnectionRepository } from "../repositories/github-connecti
 import type { GithubRepoRepository } from "../repositories/github-repo.repository.js";
 import type { GithubActivityRepository } from "../repositories/github-activity.repository.js";
 import type { GithubSyncService } from "./github-sync.service.js";
+import type { TaskRepository } from "../repositories/task.repository.js";
+import { extractTaskIdFromTitle, mapGithubEventToTaskStatus } from "../lib/task-ref.js";
 
 export type GithubWebhookJobData = {
   deliveryId: string;
@@ -24,6 +26,7 @@ export class GithubWebhookService {
     private readonly repos: GithubRepoRepository,
     private readonly activity: GithubActivityRepository,
     private readonly sync: GithubSyncService,
+    private readonly tasks?: TaskRepository,
   ) {}
 
   async accept(input: {
@@ -118,6 +121,7 @@ export class GithubWebhookService {
 
       if (data.event === "push" || data.event === "pull_request" || data.event === "issues") {
         await this.recordActivity(conn.teamId, data);
+        await this.linkTaskToGithub(conn.teamId, installationId, data);
         await redis.del(`github:activity:${conn.teamId}`);
         await this.deliveries.markStatus(data.deliveryId, "processed");
         return;
@@ -127,6 +131,46 @@ export class GithubWebhookService {
     } catch (err) {
       await this.deliveries.markStatus(data.deliveryId, "failed");
       throw err;
+    }
+  }
+
+  private async linkTaskToGithub(
+    teamId: string,
+    installationId: bigint,
+    data: GithubWebhookJobData,
+  ) {
+    if (!this.tasks) return;
+    if (data.event !== "issues" && data.event !== "pull_request") return;
+    try {
+      const node =
+        data.event === "issues"
+          ? (data.payload.issue as { title?: string; html_url?: string } | undefined)
+          : (data.payload.pull_request as
+              | { title?: string; html_url?: string }
+              | undefined);
+      const title = String(node?.title ?? "");
+      const taskId = extractTaskIdFromTitle(title);
+      if (!taskId) return;
+      const task = await this.tasks.findById(taskId);
+      if (!task || task.project.teamId !== teamId) return;
+      const conn = await this.connections.findByInstallationId(installationId);
+      if (!conn || conn.teamId !== task.project.teamId) return;
+      const htmlUrl = node?.html_url ? String(node.html_url) : null;
+      if (!htmlUrl) return;
+      const nextStatus = mapGithubEventToTaskStatus(
+        data.event,
+        data.action,
+        data.payload,
+      );
+      const updateData: { githubIssueUrl: string; status?: (typeof task)["status"] } = {
+        githubIssueUrl: htmlUrl,
+      };
+      if (nextStatus && task.status !== "cancelled") {
+        updateData.status = nextStatus;
+      }
+      await this.tasks.updateGithubLink(task.id, updateData);
+    } catch (err) {
+      console.error("[webhook] task link failed", err);
     }
   }
 
