@@ -11,6 +11,7 @@ import {
   fileController,
   gchatController,
   githubTeamController,
+  integrationController,
   projectController,
   taskController,
   teamController,
@@ -36,6 +37,22 @@ teamsRouter.get(
   "/:teamId/dashboard",
   requireTeamPermission("team:view"),
   dashboardController.get,
+);
+
+teamsRouter.get(
+  "/:teamId/integrations",
+  requireTeamPermission("team:view"),
+  integrationController.get,
+);
+teamsRouter.get(
+  "/:teamId/members/integrations",
+  requireTeamPermission("team:view"),
+  integrationController.listMembers,
+);
+teamsRouter.get(
+  "/:teamId/members/:userId/github-commits",
+  requireTeamPermission("team:view"),
+  integrationController.listCommits,
 );
 
 // Google Chat Bot (Phases 8–10)

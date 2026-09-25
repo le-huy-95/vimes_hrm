@@ -19,7 +19,18 @@ export type TeamNode = {
   name: string;
   description: string | null;
   createdAt: Date;
+  memberNames: string[];
   children: TeamNode[];
+};
+
+type TeamListItem = {
+  id: string;
+  orgId: string;
+  parentTeamId: string | null;
+  name: string;
+  description: string | null;
+  createdAt: Date;
+  memberNames: string[];
 };
 
 export class TeamService {
@@ -32,21 +43,21 @@ export class TeamService {
 
   async listTeams(orgId: string, asTree: boolean) {
     const teams = await this.teams.findManyByOrg(orgId);
-    if (!asTree) return teams;
-    return this.buildTree(teams);
+    const mapped: TeamListItem[] = teams.map((t) => ({
+      id: t.id,
+      orgId: t.orgId,
+      parentTeamId: t.parentTeamId,
+      name: t.name,
+      description: t.description,
+      createdAt: t.createdAt,
+      memberNames: t.members.map((m) => m.user.fullName),
+    }));
+    if (!asTree) return mapped;
+    return this.buildTree(mapped);
   }
 
   /** Ghép danh sách phẳng thành cây theo parentTeamId */
-  private buildTree(
-    teams: Array<{
-      id: string;
-      orgId: string;
-      parentTeamId: string | null;
-      name: string;
-      description: string | null;
-      createdAt: Date;
-    }>,
-  ): TeamNode[] {
+  private buildTree(teams: TeamListItem[]): TeamNode[] {
     const map = new Map<string, TeamNode>();
     for (const t of teams) {
       map.set(t.id, { ...t, children: [] });
@@ -64,28 +75,19 @@ export class TeamService {
 
   /**
    * Tạo team + gắn creator làm lead trong 1 transaction.
-   * Parent (nếu có) phải thuộc cùng org.
+   * Chỉ cần tên nhóm.
    */
   async createTeam(
     actorUserId: string,
     orgId: string,
-    input: { name: string; description?: string; parentTeamId?: string },
+    input: { name: string },
   ) {
-    if (input.parentTeamId) {
-      const parent = await this.teams.findById(input.parentTeamId);
-      if (!parent || parent.orgId !== orgId) {
-        throw new AppError(400, "Invalid parent team");
-      }
-    }
-
     return this.prisma.$transaction(async (tx) => {
       const teams = this.teams.withTx(tx);
       const audit = this.audit.withTx(tx);
       const team = await teams.create({
         orgId,
         name: input.name,
-        description: input.description,
-        parentTeamId: input.parentTeamId,
       });
       await teams.createMemberBasic({
         teamId: team.id,
@@ -184,6 +186,39 @@ export class TeamService {
     }
   }
 
+  async updateMember(
+    actorUserId: string,
+    orgId: string,
+    teamId: string,
+    userId: string,
+    input: { role?: TeamRole; githubLogin?: string | null },
+  ) {
+    await this.getTeam(orgId, teamId);
+    const member = await this.teams.findMember(teamId, userId);
+    if (!member) throw new AppError(404, "Member not found");
+
+    const githubLogin =
+      input.githubLogin === undefined
+        ? undefined
+        : input.githubLogin === null
+          ? null
+          : input.githubLogin.replace(/^@/, "");
+
+    const updated = await this.teams.updateMember(member.id, {
+      ...(input.role !== undefined ? { role: input.role } : {}),
+      ...(githubLogin !== undefined ? { githubLogin } : {}),
+    });
+    await this.audit.create({
+      actorUserId,
+      action: "member.update",
+      entityType: "team",
+      entityId: teamId,
+      meta: { userId, ...input, githubLogin },
+    });
+    return updated;
+  }
+
+  /** @deprecated use updateMember */
   async updateMemberRole(
     actorUserId: string,
     orgId: string,
@@ -191,19 +226,7 @@ export class TeamService {
     userId: string,
     role: TeamRole,
   ) {
-    await this.getTeam(orgId, teamId);
-    const member = await this.teams.findMember(teamId, userId);
-    if (!member) throw new AppError(404, "Member not found");
-
-    const updated = await this.teams.updateMemberRole(member.id, role);
-    await this.audit.create({
-      actorUserId,
-      action: "member.role_update",
-      entityType: "team",
-      entityId: teamId,
-      meta: { userId, role },
-    });
-    return updated;
+    return this.updateMember(actorUserId, orgId, teamId, userId, { role });
   }
 
   /** Không cho xóa lead cuối cùng của team */

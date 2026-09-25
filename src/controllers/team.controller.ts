@@ -10,7 +10,7 @@ import type { AuthedRequest } from "../middleware/auth.js";
 import {
   addMemberBodySchema,
   createTeamBodySchema,
-  updateMemberRoleBodySchema,
+  updateMemberBodySchema,
   updateTeamBodySchema,
 } from "../validators/team.validators.js";
 
@@ -26,7 +26,7 @@ export class TeamController extends BaseController {
   readonly remove = this.bind(this.handleRemove);
   readonly listMembers = this.bind(this.handleListMembers);
   readonly addMember = this.bind(this.handleAddMember);
-  readonly updateMemberRole = this.bind(this.handleUpdateMemberRole);
+  readonly updateMemberRole = this.bind(this.handleUpdateMember);
   readonly removeMember = this.bind(this.handleRemoveMember);
 
   /** Chuẩn hóa param Express (có thể là string | string[]) thành string */
@@ -101,15 +101,22 @@ export class TeamController extends BaseController {
     this.created(res, member);
   }
 
-  private async handleUpdateMemberRole(req: Request, res: Response) {
+  private async handleUpdateMember(req: Request, res: Response) {
     const { user } = req as AuthedRequest;
-    const body = updateMemberRoleBodySchema.parse(req.body);
-    const member = await this.teamService.updateMemberRole(
+    const body = updateMemberBodySchema.parse(req.body);
+    const member = await this.teamService.updateMember(
       user.sub,
       user.orgId,
       this.teamId(req),
       this.userIdParam(req),
-      body.role as TeamRole,
+      {
+        ...(body.role !== undefined
+          ? { role: body.role as TeamRole }
+          : {}),
+        ...(body.githubLogin !== undefined
+          ? { githubLogin: body.githubLogin }
+          : {}),
+      },
     );
     this.ok(res, member);
   }

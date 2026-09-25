@@ -193,11 +193,12 @@ model Team {
 }
 
 model TeamMember {
-  id       String   @id @default(cuid())
-  teamId   String   @map("team_id")
-  userId   String   @map("user_id")
-  role     TeamRole
-  joinedAt DateTime @default(now()) @map("joined_at")
+  id          String   @id @default(cuid())
+  teamId      String   @map("team_id")
+  userId      String   @map("user_id")
+  role        TeamRole
+  githubLogin String?  @map("github_login")
+  joinedAt    DateTime @default(now()) @map("joined_at")
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

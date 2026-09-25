@@ -1,8 +1,17 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router-dom";
-import { api, type Team, type TeamMember } from "../api/client";
+import {
+  api,
+  type GithubCommitPage,
+  type MemberIntegration,
+  type Team,
+  type TeamMember,
+} from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import { TasksBarChart, type TasksChartCounts } from "../components/TasksBarChart";
+import {
+  TasksBarChart,
+  type TasksChartCounts,
+} from "../components/TasksBarChart";
 
 type OutletCtx = { reloadTree: () => Promise<void> };
 
@@ -17,7 +26,8 @@ type Panel =
   | "personnel"
   | "invite"
   | "service-google"
-  | "service-github";
+  | "service-github"
+  | "commits";
 
 export function TeamPage() {
   const { teamId } = useParams<{ teamId: string }>();
@@ -42,6 +52,13 @@ export function TeamPage() {
     linked: 0,
     repoCount: 0,
   });
+  const [googleLinked, setGoogleLinked] = useState(0);
+  const [serviceMembers, setServiceMembers] = useState<MemberIntegration[]>(
+    [],
+  );
+  const [commitUser, setCommitUser] = useState<MemberIntegration | null>(null);
+  const [commits, setCommits] = useState<GithubCommitPage | null>(null);
+  const [commitsLoading, setCommitsLoading] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   async function load() {
@@ -59,18 +76,40 @@ export function TeamPage() {
       const mine = m.find((x) => x.userId === user?.id);
       setMyRole(mine?.role ?? null);
 
-      // Layer 1: chart empty + CTA; số liệu Google Tasks thật ở Layer 3
-      setChart({ todo: 0, doing: 0, done: 0, connected: false });
       try {
-        const dash = await api<{
-          github?: { connected?: boolean; repoCount?: number };
-        }>(`/teams/${teamId}/dashboard`);
+        const [dash, integ] = await Promise.all([
+          api<{
+            googleTasks?: TasksChartCounts;
+            github?: { connected?: boolean; repoCount?: number };
+          }>(`/teams/${teamId}/dashboard`),
+          api<{
+            summary: {
+              googleLinked: number;
+              githubLinked: number;
+              repoCount: number;
+            };
+          }>(`/teams/${teamId}/integrations`),
+        ]);
+        setChart(
+          dash.googleTasks ?? {
+            todo: 0,
+            doing: 0,
+            done: 0,
+            connected: false,
+          },
+        );
         setGithubSummary({
-          linked: dash.github?.connected ? 1 : 0,
-          repoCount: dash.github?.repoCount ?? 0,
+          linked: integ.summary.githubLinked,
+          repoCount: integ.summary.repoCount,
         });
+        setGoogleLinked(integ.summary.googleLinked);
       } catch {
-        setGithubSummary({ linked: 0, repoCount: 0 });
+        setChart({ todo: 0, doing: 0, done: 0, connected: false });
+        setGithubSummary({
+          linked: m.filter((x) => x.githubLogin).length,
+          repoCount: 0,
+        });
+        setGoogleLinked(m.filter((x) => x.user.googleUserId).length);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không tải được");
@@ -82,6 +121,8 @@ export function TeamPage() {
     void load();
     setPanel(null);
     setMenuOpen(false);
+    setCommits(null);
+    setCommitUser(null);
   }, [teamId, user?.id]);
 
   useEffect(() => {
@@ -100,8 +141,27 @@ export function TeamPage() {
     };
   }, [menuOpen]);
 
+  useEffect(() => {
+    if (!teamId || (panel !== "service-google" && panel !== "service-github")) {
+      return;
+    }
+    const service = panel === "service-google" ? "google" : "github";
+    let cancelled = false;
+    void api<MemberIntegration[]>(
+      `/teams/${teamId}/members/integrations?service=${service}`,
+    )
+      .then((rows) => {
+        if (!cancelled) setServiceMembers(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setServiceMembers([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [panel, teamId]);
+
   const canManage = myRole === "lead";
-  const googleLinkedCount = members.filter((m) => m.user.email).length;
 
   async function saveTeam(e: FormEvent) {
     e.preventDefault();
@@ -150,6 +210,27 @@ export function TeamPage() {
     }
   }
 
+  async function saveGithubLogin(userId: string, value: string) {
+    if (!teamId || !canManage) return;
+    const trimmed = value.trim().replace(/^@/, "");
+    try {
+      await api(`/teams/${teamId}/members/${userId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ githubLogin: trimmed || null }),
+      });
+      setMessage("Đã cập nhật GitHub login");
+      await load();
+      if (panel === "service-github") {
+        const rows = await api<MemberIntegration[]>(
+          `/teams/${teamId}/members/integrations?service=github`,
+        );
+        setServiceMembers(rows);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Cập nhật GitHub thất bại");
+    }
+  }
+
   async function remove(userId: string) {
     if (!teamId || !canManage) return;
     try {
@@ -170,6 +251,42 @@ export function TeamPage() {
       window.location.reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Xóa nhóm thất bại");
+    }
+  }
+
+  async function openCommits(row: MemberIntegration) {
+    if (!teamId || !row.linked) return;
+    setCommitUser(row);
+    setPanel("commits");
+    setCommitsLoading(true);
+    try {
+      const page = await api<GithubCommitPage>(
+        `/teams/${teamId}/members/${row.userId}/github-commits`,
+      );
+      setCommits(page);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không tải commits");
+      setCommits(null);
+    } finally {
+      setCommitsLoading(false);
+    }
+  }
+
+  async function loadMoreCommits() {
+    if (!teamId || !commitUser || !commits?.nextCursor) return;
+    setCommitsLoading(true);
+    try {
+      const page = await api<GithubCommitPage>(
+        `/teams/${teamId}/members/${commitUser.userId}/github-commits?cursor=${commits.nextCursor}`,
+      );
+      setCommits({
+        ...page,
+        items: [...commits.items, ...page.items],
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không tải thêm commits");
+    } finally {
+      setCommitsLoading(false);
     }
   }
 
@@ -266,7 +383,7 @@ export function TeamPage() {
         >
           <strong>Google</strong>
           <span className="muted small">
-            {members.length} thành viên · xem liên kết
+            {members.length} thành viên · {googleLinked} đã liên kết
           </span>
           <span className="service-card-cta">Xem thành viên ›</span>
         </button>
@@ -277,8 +394,7 @@ export function TeamPage() {
         >
           <strong>GitHub</strong>
           <span className="muted small">
-            {githubSummary.repoCount} repos · {githubSummary.linked || "—"}{" "}
-            linked
+            {githubSummary.repoCount} repos · {githubSummary.linked} linked
           </span>
           <span className="service-card-cta">Xem thành viên ›</span>
         </button>
@@ -327,67 +443,82 @@ export function TeamPage() {
                 {panel === "invite" && "Thêm người vào nhóm"}
                 {panel === "service-google" && "Google · thành viên"}
                 {panel === "service-github" && "GitHub · thành viên"}
+                {panel === "commits" &&
+                  `Commits · ${commitUser?.handle ?? ""}`}
               </h2>
               <button
                 type="button"
                 className="linkish"
-                onClick={() => setPanel(null)}
+                onClick={() => {
+                  if (panel === "commits") {
+                    setPanel("service-github");
+                    setCommits(null);
+                    setCommitUser(null);
+                  } else {
+                    setPanel(null);
+                  }
+                }}
               >
-                Đóng
+                {panel === "commits" ? "← Quay lại" : "Đóng"}
               </button>
             </div>
 
-            {(panel === "personnel" ||
-              panel === "service-google" ||
-              panel === "service-github") && (
+            {panel === "personnel" && (
               <table className="table">
                 <thead>
                   <tr>
                     <th>Tên</th>
-                    <th>
-                      {panel === "service-github" ? "GitHub" : "Email"}
-                    </th>
-                    {panel === "personnel" && <th>Vai trò</th>}
-                    {panel === "personnel" && canManage && <th />}
+                    <th>Email</th>
+                    <th>Vai trò</th>
+                    <th>GitHub</th>
+                    {canManage && <th />}
                   </tr>
                 </thead>
                 <tbody>
                   {members.map((m) => (
                     <tr key={m.id}>
                       <td>{m.user.fullName}</td>
+                      <td>{m.user.email}</td>
                       <td>
-                        {panel === "service-github" ? (
-                          <span className="muted">chưa liên kết</span>
+                        {canManage ? (
+                          <select
+                            value={m.role}
+                            onChange={(e) =>
+                              void changeRole(
+                                m.userId,
+                                e.target.value as TeamMember["role"],
+                              )
+                            }
+                          >
+                            <option value="lead">{ROLE_LABELS.lead}</option>
+                            <option value="member">{ROLE_LABELS.member}</option>
+                            <option value="viewer">{ROLE_LABELS.viewer}</option>
+                          </select>
                         ) : (
-                          m.user.email
+                          ROLE_LABELS[m.role]
                         )}
                       </td>
-                      {panel === "personnel" && (
-                        <td>
-                          {canManage ? (
-                            <select
-                              value={m.role}
-                              onChange={(e) =>
-                                void changeRole(
-                                  m.userId,
-                                  e.target.value as TeamMember["role"],
-                                )
+                      <td>
+                        {canManage ? (
+                          <input
+                            className="inline-input"
+                            defaultValue={m.githubLogin ?? ""}
+                            placeholder="@login"
+                            onBlur={(e) => {
+                              const next = e.target.value.trim().replace(/^@/, "");
+                              const prev = m.githubLogin ?? "";
+                              if (next !== prev) {
+                                void saveGithubLogin(m.userId, e.target.value);
                               }
-                            >
-                              <option value="lead">{ROLE_LABELS.lead}</option>
-                              <option value="member">
-                                {ROLE_LABELS.member}
-                              </option>
-                              <option value="viewer">
-                                {ROLE_LABELS.viewer}
-                              </option>
-                            </select>
-                          ) : (
-                            ROLE_LABELS[m.role]
-                          )}
-                        </td>
-                      )}
-                      {panel === "personnel" && canManage && (
+                            }}
+                          />
+                        ) : m.githubLogin ? (
+                          `@${m.githubLogin}`
+                        ) : (
+                          <span className="muted">—</span>
+                        )}
+                      </td>
+                      {canManage && (
                         <td>
                           <button
                             type="button"
@@ -404,12 +535,72 @@ export function TeamPage() {
               </table>
             )}
 
-            {panel === "service-google" && (
-              <p className="muted small">
-                Liên kết Google theo tài khoản đăng nhập / Workspace (chi tiết
-                sync ở lớp sau). Hiện có {googleLinkedCount} thành viên trong
-                nhóm.
-              </p>
+            {(panel === "service-google" || panel === "service-github") && (
+              <ul className="integration-member-list">
+                {serviceMembers.map((row) => (
+                  <li key={row.userId}>
+                    <div>
+                      <strong>{row.fullName}</strong>
+                      <div className="muted small">
+                        {row.linked ? row.handle : "chưa liên kết"}
+                      </div>
+                    </div>
+                    {panel === "service-github" && row.linked ? (
+                      <button
+                        type="button"
+                        className="linkish"
+                        onClick={() => void openCommits(row)}
+                      >
+                        Xem commits ›
+                      </button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {panel === "commits" && (
+              <div className="commits-panel">
+                {commitsLoading && !commits ? (
+                  <p className="muted">Đang tải…</p>
+                ) : commits && commits.items.length > 0 ? (
+                  <>
+                    <ul className="commit-list">
+                      {commits.items.map((c) => (
+                        <li key={c.id}>
+                          {c.externalUrl ? (
+                            <a
+                              href={c.externalUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {c.title}
+                            </a>
+                          ) : (
+                            <span>{c.title}</span>
+                          )}
+                          <div className="muted small">
+                            {c.repoFullName ? `${c.repoFullName} · ` : ""}
+                            {new Date(c.occurredAt).toLocaleString()}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                    {commits.nextCursor && (
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        disabled={commitsLoading}
+                        onClick={() => void loadMoreCommits()}
+                      >
+                        {commitsLoading ? "Đang tải…" : "Tải thêm"}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <p className="muted small">Chưa có commit nào cho login này.</p>
+                )}
+              </div>
             )}
 
             {panel === "invite" && canManage && (

@@ -47,11 +47,11 @@
 
 ### Task 3: Layer 2 — Integrations + commits APIs + wire panels
 
-- [ ] `GET /teams/:id/integrations`
-- [ ] `GET /teams/:id/members/integrations`
-- [ ] `GET /teams/:id/members/:userId/github-commits`
-- [ ] Optional `TeamMember.githubLogin`
-- [ ] Wire sidebar linked flags + GitHub commits drawer
+- [x] `GET /teams/:id/integrations`
+- [x] `GET /teams/:id/members/integrations`
+- [x] `GET /teams/:id/members/:userId/github-commits`
+- [x] Optional `TeamMember.githubLogin`
+- [x] Wire sidebar linked flags + GitHub commits drawer
 
 ### Task 4: Layer 3 — Google Tasks sync + real chart
 

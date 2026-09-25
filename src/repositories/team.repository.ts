@@ -6,7 +6,13 @@ import { BaseRepository } from "./base.repository.js";
 
 const memberUserInclude = {
   user: {
-    select: { id: true, email: true, fullName: true, status: true },
+    select: {
+      id: true,
+      email: true,
+      fullName: true,
+      status: true,
+      googleUserId: true,
+    },
   },
 } satisfies Prisma.TeamMemberInclude;
 
@@ -15,6 +21,14 @@ export class TeamRepository extends BaseRepository {
     return this.db.team.findMany({
       where: { orgId },
       orderBy: { name: "asc" },
+      include: {
+        members: {
+          select: {
+            user: { select: { fullName: true } },
+          },
+          orderBy: { joinedAt: "asc" },
+        },
+      },
     });
   }
 
@@ -82,6 +96,22 @@ export class TeamRepository extends BaseRepository {
     return this.db.teamMember.update({
       where: { id: memberId },
       data: { role },
+      include: memberUserInclude,
+    });
+  }
+
+  updateMember(
+    memberId: string,
+    data: { role?: TeamRole; githubLogin?: string | null },
+  ) {
+    return this.db.teamMember.update({
+      where: { id: memberId },
+      data: {
+        ...(data.role !== undefined ? { role: data.role } : {}),
+        ...(data.githubLogin !== undefined
+          ? { githubLogin: data.githubLogin }
+          : {}),
+      },
       include: memberUserInclude,
     });
   }

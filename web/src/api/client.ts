@@ -118,8 +118,56 @@ export type TeamMember = {
   teamId: string;
   userId: string;
   role: "lead" | "member" | "viewer";
+  githubLogin?: string | null;
   joinedAt: string;
-  user: { id: string; email: string; fullName: string; status: string };
+  user: {
+    id: string;
+    email: string;
+    fullName: string;
+    status: string;
+    googleUserId?: string | null;
+  };
+};
+
+export type IntegrationStatus = {
+  google: {
+    login: boolean;
+    tasks: boolean;
+    workspace: boolean;
+    gchat: boolean;
+  };
+  github: { app: boolean; repos: boolean };
+  summary: {
+    memberTotal: number;
+    googleLinked: number;
+    githubLinked: number;
+    repoCount: number;
+  };
+};
+
+export type MemberIntegration = {
+  userId: string;
+  fullName: string;
+  email: string;
+  role: string;
+  linked: boolean;
+  handle: string | null;
+  githubLogin?: string | null;
+};
+
+export type GithubCommitPage = {
+  userId: string;
+  githubLogin: string;
+  items: Array<{
+    id: string;
+    title: string;
+    eventType: string;
+    action: string | null;
+    occurredAt: string;
+    externalUrl: string | null;
+    repoFullName: string | null;
+  }>;
+  nextCursor: string | null;
 };
 
 export type Session = {

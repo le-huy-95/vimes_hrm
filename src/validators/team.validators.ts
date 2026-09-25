@@ -3,8 +3,6 @@ import { z } from "zod";
 
 export const createTeamBodySchema = z.object({
   name: z.string().min(1),
-  description: z.string().optional(),
-  parentTeamId: z.string().optional(),
 });
 
 export const updateTeamBodySchema = z.object({
@@ -17,6 +15,21 @@ export const addMemberBodySchema = z.object({
   role: z.enum(["lead", "member", "viewer"]).default("member"),
 });
 
-export const updateMemberRoleBodySchema = z.object({
-  role: z.enum(["lead", "member", "viewer"]),
-});
+export const updateMemberBodySchema = z
+  .object({
+    role: z.enum(["lead", "member", "viewer"]).optional(),
+    githubLogin: z
+      .string()
+      .trim()
+      .min(1)
+      .max(100)
+      .nullable()
+      .optional(),
+  })
+  .refine(
+    (b) => b.role !== undefined || b.githubLogin !== undefined,
+    { message: "Provide role and/or githubLogin" },
+  );
+
+/** @deprecated alias — prefer updateMemberBodySchema */
+export const updateMemberRoleBodySchema = updateMemberBodySchema;

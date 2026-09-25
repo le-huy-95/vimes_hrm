@@ -44,6 +44,7 @@ import { TaskService } from "./services/task.service.js";
 import { ChatService } from "./services/chat.service.js";
 import { DashboardService } from "./services/dashboard.service.js";
 import { GchatService } from "./services/gchat.service.js";
+import { IntegrationService } from "./services/integration.service.js";
 import { AuthController } from "./controllers/auth.controller.js";
 import { OrgController } from "./controllers/org.controller.js";
 import { TeamController } from "./controllers/team.controller.js";
@@ -54,6 +55,7 @@ import { TaskController } from "./controllers/task.controller.js";
 import { ChatController } from "./controllers/chat.controller.js";
 import { DashboardController } from "./controllers/dashboard.controller.js";
 import { GchatController } from "./controllers/gchat.controller.js";
+import { IntegrationController } from "./controllers/integration.controller.js";
 import { GithubTeamController } from "./controllers/github-team.controller.js";
 import { GithubWebhookController } from "./controllers/github-webhook.controller.js";
 
@@ -181,6 +183,15 @@ const dashboardService = new DashboardService(
 
 const gchatService = new GchatService(gchatRepository, teamRepository);
 
+const integrationService = new IntegrationService(
+  prisma,
+  teamRepository,
+  githubConnectionRepository,
+  githubActivityRepository,
+  workspaceSettingsRepository,
+  gchatRepository,
+);
+
 // --- Tầng Controller: nhận request, trả response ---
 export const authController = new AuthController(authService);
 export const orgController = new OrgController(orgService);
@@ -202,6 +213,9 @@ export const fileController = new FileController(fileService);
 export const chatController = new ChatController(chatService);
 export const dashboardController = new DashboardController(dashboardService);
 export const gchatController = new GchatController(gchatService);
+export const integrationController = new IntegrationController(
+  integrationService,
+);
 
 /** Object gom toàn bộ dependency — tiện debug / test sau này. */
 export const container = {
@@ -245,6 +259,7 @@ export const container = {
     chat: chatService,
     dashboard: dashboardService,
     gchat: gchatService,
+    integration: integrationService,
   },
   controllers: {
     auth: authController,
@@ -259,5 +274,6 @@ export const container = {
     chat: chatController,
     dashboard: dashboardController,
     gchat: gchatController,
+    integration: integrationController,
   },
 };
