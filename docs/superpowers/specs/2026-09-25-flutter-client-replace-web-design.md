@@ -4,9 +4,9 @@
 **Status:** Approved (brainstorm)  
 **Reference kiến trúc:** `b-i-test-l-p-tr-nh-VIMES-frontend` (cấu trúc thư mục, BLoC, repository/DI, dio interceptor, go_router)  
 **Không reference UI:** không copy skin/theme VIMES; không clone layout CSS React hiện tại  
-**Approach:** Scaffold sạch trong `web/` + triển khai cắt dọc theo feature đến full parity  
+**Approach:** Scaffold sạch; client Flutter ở repo sibling `manage-teams-app` (tách khỏi API; trước đây tạm ở `web/`)  
 **Targets:** Flutter mobile (iOS/Android) + Flutter web  
-**Backend:** giữ API Node/Express ở root `manage-teams` (không đổi contract trừ follow-up mobile refresh)
+**Backend:** repo `manage-teams` (API Node/Express); không chứa client trong cùng cây nguồn
 
 ---
 
