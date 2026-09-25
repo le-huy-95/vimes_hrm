@@ -21,7 +21,21 @@ enum TeamRole {
 
 enum OAuthProvider {
   google
+  google_workspace
   github
+}
+
+enum WorkspaceAuthMode {
+  service_account
+  oauth_admin
+  none
+}
+
+enum SyncLogStatus {
+  running
+  success
+  partial
+  failed
 }
 
 model Organization {
@@ -32,6 +46,10 @@ model Organization {
 
   users User[]
   teams Team[]
+  workspaceSettings   OrgWorkspaceSettings?
+  googleWorkspaceSyncs GoogleWorkspaceSync[]
+  googleGroupTeamMaps GoogleGroupTeamMap[]
+  syncLogs            SyncLog[]
 
   @@map("organizations")
 }
@@ -52,6 +70,7 @@ model User {
   teamMembers       TeamMember[]
   oauthConnections  OauthConnection[]
   auditLogs         AuditLog[]        @relation("AuditActor")
+  googleWorkspaceLinks GoogleWorkspaceSync[]
 
   @@index([orgId])
   @@map("users")
@@ -84,6 +103,7 @@ model Team {
   parent   Team?        @relation("TeamTree", fields: [parentTeamId], references: [id])
   children Team[]       @relation("TeamTree")
   members  TeamMember[]
+  googleGroupMaps GoogleGroupTeamMap[]
 
   @@index([orgId])
   @@index([parentTeamId])
@@ -143,4 +163,72 @@ model AuditLog {
 
   @@index([entityType, entityId])
   @@map("audit_logs")
+}
+
+model OrgWorkspaceSettings {
+  orgId                 String            @id @map("org_id")
+  directorySyncToken    String?           @map("directory_sync_token")
+  lastFullSyncAt        DateTime?         @map("last_full_sync_at")
+  lastIncrementalSyncAt DateTime?         @map("last_incremental_sync_at")
+  authMode              WorkspaceAuthMode @default(none) @map("auth_mode")
+  syncCursorPageToken   String?           @map("sync_cursor_page_token")
+  workspaceOauthUserId  String?           @map("workspace_oauth_user_id")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("org_workspace_settings")
+}
+
+model GoogleWorkspaceSync {
+  id            String   @id @default(cuid())
+  orgId         String   @map("org_id")
+  googleUserId  String   @map("google_user_id")
+  primaryEmail  String   @map("primary_email")
+  fullName      String   @map("full_name")
+  orgUnit       String?  @map("org_unit")
+  photoUrl      String?  @map("photo_url")
+  suspended     Boolean  @default(false)
+  linkedUserId  String?  @map("linked_user_id")
+  contentHash   String   @map("content_hash")
+  lastSyncedAt  DateTime @map("last_synced_at")
+
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  linkedUser User?        @relation(fields: [linkedUserId], references: [id])
+
+  @@unique([orgId, googleUserId])
+  @@index([orgId, primaryEmail])
+  @@index([orgId, lastSyncedAt])
+  @@map("google_workspace_sync")
+}
+
+model GoogleGroupTeamMap {
+  id               String @id @default(cuid())
+  orgId            String @map("org_id")
+  googleGroupId    String @map("google_group_id")
+  googleGroupEmail String @map("google_group_email")
+  teamId           String @map("team_id")
+
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  team Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, googleGroupId])
+  @@index([orgId])
+  @@map("google_group_team_maps")
+}
+
+model SyncLog {
+  id           String        @id @default(cuid())
+  orgId        String        @map("org_id")
+  provider     String
+  entityType   String        @map("entity_type")
+  status       SyncLogStatus
+  errorMessage String?       @map("error_message")
+  meta         Json?
+  runAt        DateTime      @default(now()) @map("run_at")
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, runAt(sort: Desc)])
+  @@map("sync_logs")
 }
