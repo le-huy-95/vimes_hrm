@@ -19,12 +19,22 @@ npm run dev
 # → http://localhost:3002/health
 ```
 
-## Web
+## Web (Flutter)
+
+Client Flutter thay React Vite. Package: `manage_teams_app` trong `web/`.
 
 ```bash
-cd web && npm install && npm run dev
-# → http://localhost:5173
+# API phải chạy trước (:3002)
+cd web
+cp -n .env.example .env   # API_DEV_URL=http://localhost:3002
+flutter pub get
+flutter run -d chrome
+# hoặc: flutter run   (iOS Simulator / Android emulator)
 ```
+
+Sau `flutter run -d chrome`, copy origin từ address bar (thường `http://localhost:xxxxx`) vào Google OAuth **Authorized JavaScript origins** — xem [`docs/GOOGLE_OAUTH.md`](docs/GOOGLE_OAUTH.md).
+
+Đặt `WEB_ORIGIN` trong API `.env` trùng origin Flutter web để OAuth callback redirect đúng app.
 
 ## Google OAuth (login)
 
@@ -56,8 +66,8 @@ Without these, Pub/Sub worker stays off; connect/send APIs return 503.
 
 ## Manual smoke checklist
 
-1. Register at `/register` (creates org)
+1. Register at `/register` (creates org) — Flutter web
 2. Create team, confirm you are lead
-3. Home → Add organization user → invite that email on a team
+3. Sidebar → Add organization user → invite that email on a team
 4. Second browser/login as member → can view, cannot edit team
-5. `GET /teams/:id/dashboard` returns aggregated snapshot
+5. Team dashboard shows Google Tasks chart + Google/GitHub cards

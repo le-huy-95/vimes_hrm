@@ -34,9 +34,15 @@ GOOGLE_IOS_URL_SCHEME=com.googleusercontent.apps.675490779243-bg50irvmfoaci5htff
    `675490779243-82deesh10bvsnec1ltk25kfa9n0l4p1k...`
 3. Copy **Client secret** → `GOOGLE_CLIENT_SECRET` trong `.env`
 4. Trong client đó, thêm:
-   - **Authorized JavaScript origins:** `http://localhost:5173`, `http://localhost:3002`
-   - **Authorized redirect URIs:** `http://localhost:3002/auth/google/callback`
-5. Restart API
+   - **Authorized JavaScript origins:**
+     - `http://localhost:3002` (API)
+     - origin Flutter web sau `flutter run -d chrome` (vd. `http://localhost:xxxxx` — xem address bar; **không** còn dùng Vite `:5173`)
+   - **Authorized redirect URIs:**
+     - `http://localhost:3002/auth/google/callback` (login)
+     - `http://localhost:3002/orgs/me/workspace/connect/callback` (Workspace Directory)
+     - `http://localhost:3002/teams/google-tasks/connect/callback` (Google Tasks)
+5. Trong API `.env`, đặt `WEB_ORIGIN` = origin Flutter web (vd. `http://localhost:xxxxx`) để callback redirect về `/oauth/callback` hoặc `/teams/:id`.
+6. Restart API
 
 Nếu client `82deesh...` không phải loại **Web application** (hoặc không có secret), tạo client Web mới và thay `GOOGLE_SERVER_CLIENT_ID`.
 
@@ -51,5 +57,7 @@ curl -s http://localhost:3002/auth/providers
 ## Lưu ý
 
 - Redirect URI phải trùng `GOOGLE_CALLBACK_URL` (kể cả port `3002`).
+- `WEB_ORIGIN` phải trùng origin Flutter web đang chạy (không còn Vite `:5173`).
 - Email Google trùng email local → tự link tài khoản.
-- iOS Client ID / URL scheme chỉ dùng khi làm app mobile; **không** thay thế được secret cho login web.
+- iOS Client ID / URL scheme dành cho mobile native sau này; login Flutter web hiện dùng redirect OAuth qua API như trước.
+- Tag archive React: `archive/react-web-before-flutter`.
