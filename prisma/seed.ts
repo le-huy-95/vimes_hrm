@@ -9,8 +9,9 @@ const PERMISSIONS: Record<TeamRole, string[]> = {
     "member:invite",
     "member:remove",
     "member:role:update",
+    "task:write",
   ],
-  member: ["team:view"],
+  member: ["team:view", "task:write"],
   viewer: ["team:view"],
 };
 
