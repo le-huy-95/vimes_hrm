@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  active
+  invited
+  disabled
+}
+
+enum TeamRole {
+  lead
+  member
+  viewer
+}
+
+enum OAuthProvider {
+  google
+  github
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  domain    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  users User[]
+  teams Team[]
+
+  @@map("organizations")
+}
+
+model User {
+  id           String     @id @default(cuid())
+  orgId        String     @map("org_id")
+  email        String     @unique
+  fullName     String     @map("full_name")
+  passwordHash String?    @map("password_hash")
+  googleUserId String?    @unique @map("google_user_id")
+  avatarFileId String?    @map("avatar_file_id")
+  status       UserStatus @default(active)
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  org               Organization      @relation(fields: [orgId], references: [id])
+  refreshTokens     RefreshToken[]
+  teamMembers       TeamMember[]
+  oauthConnections  OauthConnection[]
+  auditLogs         AuditLog[]        @relation("AuditActor")
+
+  @@index([orgId])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("refresh_tokens")
+}
+
+model Team {
+  id           String   @id @default(cuid())
+  orgId        String   @map("org_id")
+  parentTeamId String?  @map("parent_team_id")
+  name         String
+  description  String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  org      Organization @relation(fields: [orgId], references: [id])
+  parent   Team?        @relation("TeamTree", fields: [parentTeamId], references: [id])
+  children Team[]       @relation("TeamTree")
+  members  TeamMember[]
+
+  @@index([orgId])
+  @@index([parentTeamId])
+  @@map("teams")
+}
+
+model TeamMember {
+  id       String   @id @default(cuid())
+  teamId   String   @map("team_id")
+  userId   String   @map("user_id")
+  role     TeamRole
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+  @@map("team_members")
+}
+
+model RolePermission {
+  id            String @id @default(cuid())
+  roleName      String @map("role_name")
+  permissionKey String @map("permission_key")
+
+  @@unique([roleName, permissionKey])
+  @@map("roles_permissions")
+}
+
+model OauthConnection {
+  id               String        @id @default(cuid())
+  userId           String        @map("user_id")
+  provider         OAuthProvider
+  accessTokenEnc   String        @map("access_token_enc")
+  refreshTokenEnc  String?       @map("refresh_token_enc")
+  scope            String?
+  expiresAt        DateTime?     @map("expires_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@map("oauth_connections")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?  @map("actor_user_id")
+  action      String
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id")
+  meta        Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  actor User? @relation("AuditActor", fields: [actorUserId], references: [id])
+
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}

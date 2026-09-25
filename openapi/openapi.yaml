@@ -1,0 +1,176 @@
+openapi: 3.0.3
+info:
+  title: Manage Teams API
+  version: 0.1.0
+  description: Phase 1 — auth, orgs, teams, members
+servers:
+  - url: http://localhost:3001
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+  /auth/register:
+    post:
+      summary: Register with email/password (creates org)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, fullName, orgName]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                fullName: { type: string }
+                orgName: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+  /auth/login:
+    post:
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+  /auth/refresh:
+    post:
+      summary: Refresh access token (cookie)
+      responses:
+        "200":
+          description: OK
+  /auth/logout:
+    post:
+      summary: Logout
+      responses:
+        "204":
+          description: No content
+  /auth/me:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: Current user
+      responses:
+        "200":
+          description: OK
+  /auth/google:
+    get:
+      summary: Start Google OAuth
+      responses:
+        "302":
+          description: Redirect
+  /orgs/me:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: Current organization
+      responses:
+        "200":
+          description: OK
+    patch:
+      security: [{ bearerAuth: [] }]
+      summary: Update organization
+      responses:
+        "200":
+          description: OK
+  /teams:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: List teams
+      parameters:
+        - in: query
+          name: as
+          schema: { type: string, enum: [tree] }
+      responses:
+        "200":
+          description: OK
+    post:
+      security: [{ bearerAuth: [] }]
+      summary: Create team (creator becomes lead)
+      responses:
+        "201":
+          description: Created
+  /teams/{teamId}:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: Get team
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "200":
+          description: OK
+    patch:
+      security: [{ bearerAuth: [] }]
+      summary: Update team (team:manage)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "200":
+          description: OK
+    delete:
+      security: [{ bearerAuth: [] }]
+      summary: Delete team (rejects if children)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "204":
+          description: No content
+  /teams/{teamId}/members:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: List members
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "200":
+          description: OK
+    post:
+      security: [{ bearerAuth: [] }]
+      summary: Invite member by email
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "201":
+          description: Created
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    teamId:
+      in: path
+      name: teamId
+      required: true
+      schema: { type: string }
+  schemas:
+    Session:
+      type: object
+      properties:
+        accessToken: { type: string }
+        user:
+          type: object
+          properties:
+            sub: { type: string }
+            orgId: { type: string }
+            email: { type: string }
