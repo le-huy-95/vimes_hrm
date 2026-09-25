@@ -24,7 +24,24 @@ export function createApp() {
       credentials: true,
     }),
   );
-  app.use(express.json());
+  // GitHub webhooks need the exact raw bytes for HMAC verification — keep
+  // express.raw for that path and skip the JSON parser there (avoids
+  // double-parsing which would break signature verification).
+  const jsonParser = express.json();
+  app.use((req, res, next) => {
+    if (req.path === "/webhooks/github" || req.originalUrl.startsWith("/webhooks/github")) {
+      return next();
+    }
+    jsonParser(req, res, next);
+  });
+  app.use(
+    "/webhooks/github",
+    express.raw({ type: "*/*", limit: "2mb" }),
+    (req, _res, next) => {
+      (req as unknown as { rawBody?: Buffer }).rawBody = req.body as Buffer;
+      next();
+    },
+  );
   app.use(cookieParser());
 
   // Health check — không cần auth

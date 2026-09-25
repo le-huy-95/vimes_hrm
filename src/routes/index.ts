@@ -6,9 +6,11 @@ import type { Express } from "express";
 import { authRouter } from "./auth.routes.js";
 import { orgsRouter } from "./orgs.routes.js";
 import { teamsRouter } from "./teams.routes.js";
+import { webhooksRouter } from "./webhooks.routes.js";
 
 export function registerRoutes(app: Express) {
   app.use("/auth", authRouter);
   app.use("/orgs", orgsRouter);
   app.use("/teams", teamsRouter);
+  app.use("/webhooks", webhooksRouter);
 }
