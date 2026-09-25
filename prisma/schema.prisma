@@ -68,19 +68,31 @@ enum GithubDeliveryStatus {
   failed
 }
 
+enum FileEntityType {
+  avatar
+  task_attachment
+  other
+}
+
+enum FileStatus {
+  pending
+  confirmed
+  failed
+}
+
 model Organization {
   id        String   @id @default(cuid())
   name      String
   domain    String?
   createdAt DateTime @default(now()) @map("created_at")
 
-  users User[]
-  teams Team[]
-  workspaceSettings   OrgWorkspaceSettings?
+  users                User[]
+  teams                Team[]
+  workspaceSettings    OrgWorkspaceSettings?
   googleWorkspaceSyncs GoogleWorkspaceSync[]
-  googleGroupTeamMaps GoogleGroupTeamMap[]
-  syncLogs            SyncLog[]
-  githubConnections GithubConnection[]
+  googleGroupTeamMaps  GoogleGroupTeamMap[]
+  syncLogs             SyncLog[]
+  githubConnections    GithubConnection[]
 
   @@map("organizations")
 }
@@ -96,15 +108,17 @@ model User {
   status       UserStatus @default(active)
   createdAt    DateTime   @default(now()) @map("created_at")
 
-  org               Organization      @relation(fields: [orgId], references: [id])
-  refreshTokens     RefreshToken[]
-  teamMembers       TeamMember[]
-  oauthConnections  OauthConnection[]
-  auditLogs         AuditLog[]        @relation("AuditActor")
-  googleWorkspaceLinks GoogleWorkspaceSync[]
-  githubConnectionsConnected GithubConnection[] @relation("GithubConnectedBy")
-  assignedTasks     Task[]            @relation("TaskAssignee")
-  taskComments      TaskComment[]
+  org                        Organization          @relation(fields: [orgId], references: [id])
+  refreshTokens              RefreshToken[]
+  teamMembers                TeamMember[]
+  oauthConnections           OauthConnection[]
+  auditLogs                  AuditLog[]            @relation("AuditActor")
+  googleWorkspaceLinks       GoogleWorkspaceSync[]
+  githubConnectionsConnected GithubConnection[]    @relation("GithubConnectedBy")
+  assignedTasks              Task[]                @relation("TaskAssignee")
+  taskComments               TaskComment[]
+  avatarFile                 File?                 @relation("UserAvatar", fields: [avatarFileId], references: [id])
+  uploadedFiles              File[]                @relation("FileUploader")
 
   @@index([orgId])
   @@map("users")
@@ -133,15 +147,15 @@ model Team {
   description  String?
   createdAt    DateTime @default(now()) @map("created_at")
 
-  org      Organization @relation(fields: [orgId], references: [id])
-  parent   Team?        @relation("TeamTree", fields: [parentTeamId], references: [id])
-  children Team[]       @relation("TeamTree")
-  members  TeamMember[]
-  googleGroupMaps GoogleGroupTeamMap[]
+  org              Organization          @relation(fields: [orgId], references: [id])
+  parent           Team?                 @relation("TeamTree", fields: [parentTeamId], references: [id])
+  children         Team[]                @relation("TeamTree")
+  members          TeamMember[]
+  googleGroupMaps  GoogleGroupTeamMap[]
   githubConnection GithubConnection?
   githubRepos      GithubRepo[]
-  githubActivity  GithubActivityEvent[]
-  projects        Project[]
+  githubActivity   GithubActivityEvent[]
+  projects         Project[]
 
   @@index([orgId])
   @@index([parentTeamId])
@@ -174,13 +188,13 @@ model RolePermission {
 }
 
 model OauthConnection {
-  id               String        @id @default(cuid())
-  userId           String        @map("user_id")
-  provider         OAuthProvider
-  accessTokenEnc   String        @map("access_token_enc")
-  refreshTokenEnc  String?       @map("refresh_token_enc")
-  scope            String?
-  expiresAt        DateTime?     @map("expires_at")
+  id              String        @id @default(cuid())
+  userId          String        @map("user_id")
+  provider        OAuthProvider
+  accessTokenEnc  String        @map("access_token_enc")
+  refreshTokenEnc String?       @map("refresh_token_enc")
+  scope           String?
+  expiresAt       DateTime?     @map("expires_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -219,17 +233,17 @@ model OrgWorkspaceSettings {
 }
 
 model GoogleWorkspaceSync {
-  id            String   @id @default(cuid())
-  orgId         String   @map("org_id")
-  googleUserId  String   @map("google_user_id")
-  primaryEmail  String   @map("primary_email")
-  fullName      String   @map("full_name")
-  orgUnit       String?  @map("org_unit")
-  photoUrl      String?  @map("photo_url")
-  suspended     Boolean  @default(false)
-  linkedUserId  String?  @map("linked_user_id")
-  contentHash   String   @map("content_hash")
-  lastSyncedAt  DateTime @map("last_synced_at")
+  id           String   @id @default(cuid())
+  orgId        String   @map("org_id")
+  googleUserId String   @map("google_user_id")
+  primaryEmail String   @map("primary_email")
+  fullName     String   @map("full_name")
+  orgUnit      String?  @map("org_unit")
+  photoUrl     String?  @map("photo_url")
+  suspended    Boolean  @default(false)
+  linkedUserId String?  @map("linked_user_id")
+  contentHash  String   @map("content_hash")
+  lastSyncedAt DateTime @map("last_synced_at")
 
   org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   linkedUser User?        @relation(fields: [linkedUserId], references: [id])
@@ -306,8 +320,8 @@ model GithubRepo {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  team       Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  connection GithubConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  team       Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  connection GithubConnection      @relation(fields: [connectionId], references: [id], onDelete: Cascade)
   activity   GithubActivityEvent[]
 
   @@unique([teamId, githubRepoId])
@@ -342,7 +356,7 @@ model GithubActivityEvent {
   meta        Json?
   createdAt   DateTime @default(now()) @map("created_at")
 
-  team Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  team Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
   repo GithubRepo? @relation(fields: [repoId], references: [id], onDelete: SetNull)
 
   @@index([teamId, occurredAt(sort: Desc)])
@@ -377,9 +391,10 @@ model Task {
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
-  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  assignee  User?         @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  comments  TaskComment[]
+  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee    User?            @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  comments    TaskComment[]
+  attachments TaskAttachment[]
 
   @@index([projectId])
   @@index([status])
@@ -398,4 +413,42 @@ model TaskComment {
 
   @@index([taskId])
   @@map("task_comments")
+}
+
+model File {
+  id           String         @id @default(cuid())
+  uploaderId   String         @map("uploader_id")
+  orgId        String         @map("org_id")
+  bucketKey    String         @unique @map("bucket_key")
+  thumbnailKey String?        @map("thumbnail_key")
+  originalName String         @map("original_name")
+  mimeType     String         @map("mime_type")
+  sizeBytes    Int            @map("size_bytes")
+  entityType   FileEntityType @map("entity_type")
+  entityId     String?        @map("entity_id")
+  status       FileStatus     @default(confirmed)
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  uploader    User             @relation("FileUploader", fields: [uploaderId], references: [id], onDelete: Cascade)
+  avatarUsers User[]           @relation("UserAvatar")
+  attachments TaskAttachment[]
+
+  @@index([orgId])
+  @@index([uploaderId])
+  @@index([entityType, entityId])
+  @@map("files")
+}
+
+model TaskAttachment {
+  id     String @id @default(cuid())
+  taskId String @map("task_id")
+  fileId String @map("file_id")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, fileId])
+  @@index([taskId])
+  @@index([fileId])
+  @@map("task_attachments")
 }
