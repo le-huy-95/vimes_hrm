@@ -22,6 +22,13 @@ const envSchema = z.object({
   GOOGLE_CALLBACK_URL: z
     .string()
     .default("http://localhost:3001/auth/google/callback"),
+  REDIS_URL: z.string().default("redis://localhost:6379"),
+  GOOGLE_SERVICE_ACCOUNT_JSON: z.string().optional().default(""),
+  GOOGLE_WORKSPACE_ADMIN_EMAIL: z.string().optional().default(""),
+  GOOGLE_WORKSPACE_SYNC_CRON: z.string().default("0 */6 * * *"),
+  GOOGLE_WORKSPACE_CONNECT_CALLBACK_URL: z
+    .string()
+    .default("http://localhost:3002/orgs/me/workspace/connect/callback"),
   WEB_ORIGIN: z.string().default("http://localhost:5173"),
   COOKIE_SECURE: z
     .enum(["true", "false"])
@@ -43,3 +50,7 @@ export const env = {
 
 export const googleEnabled =
   Boolean(env.GOOGLE_WEB_CLIENT_ID) && Boolean(env.GOOGLE_CLIENT_SECRET);
+
+export const googleServiceAccountEnabled =
+  Boolean(env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim()) &&
+  Boolean(env.GOOGLE_WORKSPACE_ADMIN_EMAIL?.trim());
