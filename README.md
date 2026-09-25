@@ -19,22 +19,22 @@ npm run dev
 # → http://localhost:3002/health
 ```
 
-## Web (Flutter)
+## Client (repo riêng)
 
-Client Flutter thay React Vite. Package: `manage_teams_app` trong `web/`.
+UI Flutter nằm ở sibling repo **`manage-teams-app`** (`../manage-teams-app`), không còn trong thư mục `web/` của API.
 
 ```bash
-# API phải chạy trước (:3002)
-cd web
-cp -n .env.example .env   # API_DEV_URL=http://localhost:3002
+# Terminal 1 — API (repo này)
+npm run dev   # → http://localhost:3002/health
+
+# Terminal 2 — Flutter client
+cd ../manage-teams-app
+cp -n .env.example .env
 flutter pub get
 flutter run -d chrome
-# hoặc: flutter run   (iOS Simulator / Android emulator)
 ```
 
-Sau `flutter run -d chrome`, copy origin từ address bar (thường `http://localhost:xxxxx`) vào Google OAuth **Authorized JavaScript origins** — xem [`docs/GOOGLE_OAUTH.md`](docs/GOOGLE_OAUTH.md).
-
-Đặt `WEB_ORIGIN` trong API `.env` trùng origin Flutter web để OAuth callback redirect đúng app.
+Sau `flutter run -d chrome`, copy origin từ address bar vào Google OAuth **Authorized JavaScript origins** và đặt `WEB_ORIGIN` trong `.env` API cho khớp — xem [`docs/GOOGLE_OAUTH.md`](docs/GOOGLE_OAUTH.md).
 
 ## Google OAuth (login)
 

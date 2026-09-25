@@ -57,7 +57,7 @@ curl -s http://localhost:3002/auth/providers
 ## Lưu ý
 
 - Redirect URI phải trùng `GOOGLE_CALLBACK_URL` (kể cả port `3002`).
-- `WEB_ORIGIN` phải trùng origin Flutter web đang chạy (không còn Vite `:5173`).
+- Client Flutter: repo `manage-teams-app` (sibling). OAuth redirect về origin app đó qua `WEB_ORIGIN`.
 - Email Google trùng email local → tự link tài khoản.
 - iOS Client ID / URL scheme dành cho mobile native sau này; login Flutter web hiện dùng redirect OAuth qua API như trước.
 - Tag archive React: `archive/react-web-before-flutter`.
