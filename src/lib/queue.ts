@@ -2,17 +2,25 @@ import { Queue } from "bullmq";
 import { redis } from "./redis.js";
 
 export const WORKSPACE_SYNC_QUEUE = "google-workspace-sync";
+export const GITHUB_WEBHOOK_QUEUE = "github-webhook";
+export const GITHUB_SYNC_REPOS_QUEUE = "github-sync-repos";
 
 export function workspaceSyncJobId(orgId: string) {
   return `google-workspace-sync:${orgId}`;
 }
 
+export function githubSyncReposJobId(installationId: string) {
+  return `github-sync-repos:${installationId}`;
+}
+
 const globalForQueue = globalThis as unknown as {
   workspaceSyncQueue?: Queue;
+  githubWebhookQueue?: Queue;
+  githubSyncReposQueue?: Queue;
 };
 
-function createWorkspaceSyncQueue() {
-  return new Queue(WORKSPACE_SYNC_QUEUE, {
+function createQueue(name: string) {
+  return new Queue(name, {
     connection: redis,
     defaultJobOptions: {
       attempts: 5,
@@ -24,12 +32,25 @@ function createWorkspaceSyncQueue() {
 }
 
 export const workspaceSyncQueue =
-  globalForQueue.workspaceSyncQueue ?? createWorkspaceSyncQueue();
+  globalForQueue.workspaceSyncQueue ?? createQueue(WORKSPACE_SYNC_QUEUE);
+
+export const githubWebhookQueue =
+  globalForQueue.githubWebhookQueue ?? createQueue(GITHUB_WEBHOOK_QUEUE);
+
+export const githubSyncReposQueue =
+  globalForQueue.githubSyncReposQueue ?? createQueue(GITHUB_SYNC_REPOS_QUEUE);
 
 if (process.env.NODE_ENV !== "production") {
   globalForQueue.workspaceSyncQueue = workspaceSyncQueue;
+  globalForQueue.githubWebhookQueue = githubWebhookQueue;
+  globalForQueue.githubSyncReposQueue = githubSyncReposQueue;
 }
 
 export async function closeWorkspaceSyncQueue(): Promise<void> {
   await workspaceSyncQueue.close();
+}
+
+export async function closeGithubQueues(): Promise<void> {
+  await githubWebhookQueue.close();
+  await githubSyncReposQueue.close();
 }

@@ -29,6 +29,14 @@ const envSchema = z.object({
   GOOGLE_WORKSPACE_CONNECT_CALLBACK_URL: z
     .string()
     .default("http://localhost:3002/orgs/me/workspace/connect/callback"),
+  GITHUB_APP_ID: z.string().optional().default(""),
+  GITHUB_APP_PRIVATE_KEY: z.string().optional().default(""),
+  GITHUB_APP_SLUG: z.string().optional().default(""),
+  GITHUB_WEBHOOK_SECRET: z.string().optional().default(""),
+  GITHUB_APP_INSTALL_CALLBACK_URL: z
+    .string()
+    .default("http://localhost:3002/teams/github/install/callback"),
+  GITHUB_SYNC_CRON: z.string().default("0 */6 * * *"),
   WEB_ORIGIN: z.string().default("http://localhost:5173"),
   COOKIE_SECURE: z
     .enum(["true", "false"])
@@ -54,3 +62,9 @@ export const googleEnabled =
 export const googleServiceAccountEnabled =
   Boolean(env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim()) &&
   Boolean(env.GOOGLE_WORKSPACE_ADMIN_EMAIL?.trim());
+
+export const githubAppEnabled =
+  Boolean(env.GITHUB_APP_ID?.trim()) &&
+  Boolean(env.GITHUB_APP_PRIVATE_KEY?.trim()) &&
+  Boolean(env.GITHUB_APP_SLUG?.trim()) &&
+  Boolean(env.GITHUB_WEBHOOK_SECRET?.trim());
