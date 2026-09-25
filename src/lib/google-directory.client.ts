@@ -38,7 +38,11 @@ function resolveServiceAccountKey(): Record<string, string> {
   try {
     return JSON.parse(raw);
   } catch {
-    return JSON.parse(readFileSync(raw, "utf8"));
+    try {
+      return JSON.parse(readFileSync(raw, "utf8"));
+    } catch {
+      throw new AppError(503, "Invalid GOOGLE_SERVICE_ACCOUNT_JSON (must be JSON string or readable file path)");
+    }
   }
 }
 
@@ -64,7 +68,7 @@ function buildAuth(opts?: { oauth?: { accessToken: string; refreshToken?: string
 }
 
 export type GoogleDirectoryClient = {
-  listUsersPage: (args?: { syncToken?: string; pageToken?: string; maxResults?: number }) => Promise<{ users: DirectoryUser[]; nextPageToken?: string; newSyncToken?: string }>;
+  listUsersPage: (args?: { syncToken?: string; pageToken?: string; maxResults?: number }) => Promise<{ users: DirectoryUser[]; nextPageToken?: string; nextSyncToken?: string }>;
   listGroupsPage: (args?: { pageToken?: string; maxResults?: number }) => Promise<{ groups: DirectoryGroup[]; nextPageToken?: string }>;
 };
 
@@ -91,7 +95,7 @@ export async function createDirectoryClient(opts?: {
             orgUnitPath?: string | null; thumbnailPhotoUrl?: string | null;
             suspended?: boolean | null;
           }> | null;
-          nextPageToken?: string | null; newSyncToken?: string | null;
+          nextPageToken?: string | null; nextSyncToken?: string | null;
         } };
         const users: DirectoryUser[] = (res.data.users ?? [])
           .filter((u) => u.id && u.primaryEmail)
@@ -99,14 +103,14 @@ export async function createDirectoryClient(opts?: {
             googleUserId: u.id as string,
             primaryEmail: u.primaryEmail as string,
             fullName: u.name?.fullName ?? (u.primaryEmail as string),
-            orgUnit: (u.orgUnitPath as string | undefined) ?? null,
-            photoUrl: (u.thumbnailPhotoUrl as string | undefined) ?? null,
+            orgUnit: u.orgUnitPath ?? null,
+            photoUrl: u.thumbnailPhotoUrl ?? null,
             suspended: u.suspended ?? false,
           }));
         return {
           users,
           nextPageToken: res.data.nextPageToken ?? undefined,
-          newSyncToken: (res.data as { newSyncToken?: string }).newSyncToken ?? undefined,
+          nextSyncToken: res.data.nextSyncToken ?? undefined,
         };
       } catch (err) {
         toAuthError(err);

@@ -10,7 +10,7 @@ export type WorkspaceUserHashInput = {
 
 export function workspaceUserContentHash(input: WorkspaceUserHashInput): string {
   const payload = [
-    input.primaryEmail.toLowerCase(),
+    input.primaryEmail.trim().toLowerCase(),
     input.fullName,
     input.orgUnit ?? "",
     input.photoUrl ?? "",
