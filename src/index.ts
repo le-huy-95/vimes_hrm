@@ -7,6 +7,7 @@ import { createApp } from "./app.js";
 import { env } from "./lib/env.js";
 import { container } from "./container.js";
 import { startWorkspaceSyncWorker } from "./workers/google-workspace.worker.js";
+import { startGithubWorkers } from "./workers/github.worker.js";
 
 const app = createApp();
 
@@ -15,9 +16,14 @@ const server = app.listen(env.PORT, () => {
 });
 
 const worker = startWorkspaceSyncWorker(container.services.workspaceSync);
+const githubWorkers = startGithubWorkers(
+  container.services.githubWebhook,
+  container.services.githubSync,
+);
 
 async function shutdown(signal: string) {
   console.log(`received ${signal}, shutting down…`);
+  await githubWorkers.close();
   await worker.close();
   server.close();
   process.exit(0);
