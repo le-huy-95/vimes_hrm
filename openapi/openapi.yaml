@@ -463,6 +463,111 @@ paths:
       responses:
         "204":
           description: No content
+  /orgs/me/avatar:
+    patch:
+      security: [{ bearerAuth: [] }]
+      summary: Set avatar from a confirmed file
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fileId]
+              properties:
+                fileId: { type: string }
+      responses:
+        "200":
+          description: OK
+  /files/presign:
+    post:
+      security: [{ bearerAuth: [] }]
+      summary: Get a presigned PUT URL to upload a file directly to storage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [originalName, mimeType, sizeBytes, entityType]
+              properties:
+                originalName: { type: string }
+                mimeType: { type: string, enum: [image/jpeg, image/png, image/webp, image/gif, application/pdf] }
+                sizeBytes: { type: integer }
+                entityType: { type: string, enum: [avatar, task_attachment, other] }
+                entityId: { type: string }
+      responses:
+        "200":
+          description: OK
+  /files/confirm:
+    post:
+      security: [{ bearerAuth: [] }]
+      summary: Confirm an upload, create the file record, enqueue thumbnail if image
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bucketKey, originalName, mimeType, sizeBytes, entityType]
+              properties:
+                bucketKey: { type: string }
+                originalName: { type: string }
+                mimeType: { type: string, enum: [image/jpeg, image/png, image/webp, image/gif, application/pdf] }
+                sizeBytes: { type: integer }
+                entityType: { type: string, enum: [avatar, task_attachment, other] }
+                entityId: { type: string }
+      responses:
+        "201":
+          description: Created
+  /files/{fileId}:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: Get file metadata with short-lived download and thumbnail URLs
+      parameters:
+        - $ref: "#/components/parameters/fileId"
+      responses:
+        "200":
+          description: OK
+  /teams/{teamId}/tasks/{taskId}/attachments:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: List task attachments (team:view)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+        - $ref: "#/components/parameters/taskId"
+      responses:
+        "200":
+          description: OK
+    post:
+      security: [{ bearerAuth: [] }]
+      summary: Attach a confirmed file to a task (task:write)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+        - $ref: "#/components/parameters/taskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fileId]
+              properties:
+                fileId: { type: string }
+      responses:
+        "201":
+          description: Created
+  /teams/{teamId}/tasks/{taskId}/attachments/{fileId}:
+    delete:
+      security: [{ bearerAuth: [] }]
+      summary: Detach a file from a task (task:write)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+        - $ref: "#/components/parameters/taskId"
+        - $ref: "#/components/parameters/fileId"
+      responses:
+        "204":
+          description: No content
   /webhooks/github:
     post:
       summary: GitHub App webhook (HMAC signature; no JWT)
@@ -511,6 +616,11 @@ components:
     commentId:
       in: path
       name: commentId
+      required: true
+      schema: { type: string }
+    fileId:
+      in: path
+      name: fileId
       required: true
       schema: { type: string }
   schemas:

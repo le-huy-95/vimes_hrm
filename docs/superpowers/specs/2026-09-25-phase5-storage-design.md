@@ -1,7 +1,7 @@
 # Phase 5 Design — Object Storage (MinIO/S3)
 
 **Date:** 2026-09-25  
-**Status:** Approved; implementing  
+**Status:** Implemented  
 **Depends on:** Phase 1 (users.avatar_file_id), Phase 4 (tasks)  
 **Scope:** **A** — MinIO in Compose + API (presign/confirm/download URL) + thumbnail BullMQ job + wire avatar + task_attachments. No CDN, no web UI.
 
