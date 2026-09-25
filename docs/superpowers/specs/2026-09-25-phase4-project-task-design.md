@@ -1,7 +1,7 @@
 # Phase 4 Design — Project / Task + GitHub `#task-<id>` link
 
 **Date:** 2026-09-25  
-**Status:** Approved; implementing  
+**Status:** Implemented  
 **Depends on:** Phase 1 (teams/RBAC), Phase 3 (GitHub webhook worker)  
 **Scope choice:** **A** — API only (no web UI); no file attachments (Phase 5)  
 **Approach:** Extend existing `github-webhook` worker (no new queue)

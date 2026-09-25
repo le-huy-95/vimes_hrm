@@ -332,6 +332,137 @@ paths:
       responses:
         "200":
           description: OK
+  /teams/{teamId}/projects:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: List projects (team:view)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "200":
+          description: OK
+    post:
+      security: [{ bearerAuth: [] }]
+      summary: Create project (team:manage)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+      responses:
+        "201":
+          description: Created
+  /teams/{teamId}/projects/{projectId}:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: Get project (team:view)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+        - $ref: "#/components/parameters/projectId"
+      responses:
+        "200":
+          description: OK
+    patch:
+      security: [{ bearerAuth: [] }]
+      summary: Update project (team:manage)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+        - $ref: "#/components/parameters/projectId"
+      responses:
+        "200":
+          description: OK
+    delete:
+      security: [{ bearerAuth: [] }]
+      summary: Delete project incl. tasks cascade (team:manage)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+        - $ref: "#/components/parameters/projectId"
+      responses:
+        "204":
+          description: No content
+  /teams/{teamId}/projects/{projectId}/tasks:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: List tasks (team:view)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+        - $ref: "#/components/parameters/projectId"
+      responses:
+        "200":
+          description: OK
+    post:
+      security: [{ bearerAuth: [] }]
+      summary: Create task (task:write)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+        - $ref: "#/components/parameters/projectId"
+      responses:
+        "201":
+          description: Created
+  /teams/{teamId}/tasks/{taskId}:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: Get task (team:view)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+        - $ref: "#/components/parameters/taskId"
+      responses:
+        "200":
+          description: OK
+    patch:
+      security: [{ bearerAuth: [] }]
+      summary: Update task (task:write)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+        - $ref: "#/components/parameters/taskId"
+      responses:
+        "200":
+          description: OK
+    delete:
+      security: [{ bearerAuth: [] }]
+      summary: Delete task (task:write)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+        - $ref: "#/components/parameters/taskId"
+      responses:
+        "204":
+          description: No content
+  /teams/{teamId}/tasks/{taskId}/comments:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: List task comments (team:view)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+        - $ref: "#/components/parameters/taskId"
+      responses:
+        "200":
+          description: OK
+    post:
+      security: [{ bearerAuth: [] }]
+      summary: Add task comment (task:write)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+        - $ref: "#/components/parameters/taskId"
+      responses:
+        "201":
+          description: Created
+  /teams/{teamId}/tasks/{taskId}/comments/{commentId}:
+    delete:
+      security: [{ bearerAuth: [] }]
+      summary: Delete comment, author or team:manage (task:write)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+        - $ref: "#/components/parameters/taskId"
+        - $ref: "#/components/parameters/commentId"
+      responses:
+        "204":
+          description: No content
   /webhooks/github:
     post:
       summary: GitHub App webhook (HMAC signature; no JWT)
@@ -365,6 +496,21 @@ components:
     teamId:
       in: path
       name: teamId
+      required: true
+      schema: { type: string }
+    projectId:
+      in: path
+      name: projectId
+      required: true
+      schema: { type: string }
+    taskId:
+      in: path
+      name: taskId
+      required: true
+      schema: { type: string }
+    commentId:
+      in: path
+      name: commentId
       required: true
       schema: { type: string }
   schemas:
