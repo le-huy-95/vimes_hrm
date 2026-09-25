@@ -1,7 +1,8 @@
 # Phase 8–10 Design — Google Chat Bot (Inbound + Outbound + Health)
 
 **Date:** 2026-09-25  
-**Status:** Implementing  
+**Status:** Implemented (GChat requires GCP credentials to go live; worker disabled by default)
+  
 **Scope:** Code scaffold + APIs + StreamingPull worker + renew/backup jobs. Real GCP credentials optional — worker no-ops when disabled.
 
 ## Goals

@@ -345,6 +345,36 @@ paths:
       responses:
         "200":
           description: OK
+  /teams/{teamId}/gchat/spaces:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: List Google Chat spaces linked to team
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "200":
+          description: OK
+    post:
+      security: [{ bearerAuth: [] }]
+      summary: Connect/map a Google Chat space (team:manage); supports Idempotency-Key
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "201":
+          description: Created
+  /teams/{teamId}/gchat/spaces/{spaceId}/messages:
+    post:
+      security: [{ bearerAuth: [] }]
+      summary: Send message via Chat Bot (outbound); Idempotency-Key supported
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+        - in: path
+          name: spaceId
+          required: true
+          schema: { type: string }
+      responses:
+        "201":
+          description: Created
   /teams/{teamId}/channels:
     get:
       security: [{ bearerAuth: [] }]

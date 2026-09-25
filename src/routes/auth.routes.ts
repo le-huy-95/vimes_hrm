@@ -7,8 +7,11 @@
 import { Router } from "express";
 import { authController } from "../container.js";
 import { authenticateJWT } from "../middleware/auth.js";
+import { authRateLimiter } from "../middleware/rate-limit.js";
 
 export const authRouter = Router();
+
+authRouter.use(authRateLimiter);
 
 authRouter.get("/providers", authController.providers);
 authRouter.post("/register", authController.register);

@@ -11,10 +11,12 @@ import helmet from "helmet";
 import { env } from "./lib/env.js";
 import { registerRoutes } from "./routes/index.js";
 import { errorHandler } from "./middleware/error.js";
+import { requestId } from "./middleware/request-id.js";
 
 export function createApp() {
   const app = express();
 
+  app.use(requestId);
   // Bảo mật HTTP headers cơ bản
   app.use(helmet());
   // Cho phép frontend (WEB_ORIGIN) gọi API kèm cookie

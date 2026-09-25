@@ -28,6 +28,7 @@ import { TaskAttachmentRepository } from "./repositories/task-attachment.reposit
 import { TaskRepository } from "./repositories/task.repository.js";
 import { ChannelRepository } from "./repositories/channel.repository.js";
 import { MessageRepository } from "./repositories/message.repository.js";
+import { GchatRepository } from "./repositories/gchat.repository.js";
 import { SessionService } from "./services/session.service.js";
 import { AuthService } from "./services/auth.service.js";
 import { OrgService } from "./services/org.service.js";
@@ -42,6 +43,7 @@ import { FileService } from "./services/file.service.js";
 import { TaskService } from "./services/task.service.js";
 import { ChatService } from "./services/chat.service.js";
 import { DashboardService } from "./services/dashboard.service.js";
+import { GchatService } from "./services/gchat.service.js";
 import { AuthController } from "./controllers/auth.controller.js";
 import { OrgController } from "./controllers/org.controller.js";
 import { TeamController } from "./controllers/team.controller.js";
@@ -51,6 +53,7 @@ import { FileController } from "./controllers/file.controller.js";
 import { TaskController } from "./controllers/task.controller.js";
 import { ChatController } from "./controllers/chat.controller.js";
 import { DashboardController } from "./controllers/dashboard.controller.js";
+import { GchatController } from "./controllers/gchat.controller.js";
 import { GithubTeamController } from "./controllers/github-team.controller.js";
 import { GithubWebhookController } from "./controllers/github-webhook.controller.js";
 
@@ -75,6 +78,7 @@ const fileRepository = new FileRepository(prisma);
 const taskAttachmentRepository = new TaskAttachmentRepository(prisma);
 const channelRepository = new ChannelRepository(prisma);
 const messageRepository = new MessageRepository(prisma);
+const gchatRepository = new GchatRepository(prisma);
 
 // --- Tầng Service: nghiệp vụ, không set HTTP status ---
 const sessionService = new SessionService(refreshTokenRepository);
@@ -175,6 +179,8 @@ const dashboardService = new DashboardService(
   githubConnectionRepository,
 );
 
+const gchatService = new GchatService(gchatRepository, teamRepository);
+
 // --- Tầng Controller: nhận request, trả response ---
 export const authController = new AuthController(authService);
 export const orgController = new OrgController(orgService);
@@ -195,6 +201,7 @@ export const taskController = new TaskController(taskService);
 export const fileController = new FileController(fileService);
 export const chatController = new ChatController(chatService);
 export const dashboardController = new DashboardController(dashboardService);
+export const gchatController = new GchatController(gchatService);
 
 /** Object gom toàn bộ dependency — tiện debug / test sau này. */
 export const container = {
@@ -220,6 +227,7 @@ export const container = {
     taskAttachment: taskAttachmentRepository,
     channel: channelRepository,
     message: messageRepository,
+    gchat: gchatRepository,
   },
   services: {
     session: sessionService,
@@ -236,6 +244,7 @@ export const container = {
     file: fileService,
     chat: chatService,
     dashboard: dashboardService,
+    gchat: gchatService,
   },
   controllers: {
     auth: authController,
@@ -249,5 +258,6 @@ export const container = {
     file: fileController,
     chat: chatController,
     dashboard: dashboardController,
+    gchat: gchatController,
   },
 };

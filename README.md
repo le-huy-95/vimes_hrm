@@ -1,57 +1,57 @@
-# Manage Teams API (Phase 1)
+# Manage Teams API
+
+Phases **1–12** implemented on `master` (Google Chat Bot is scaffolded; enable with GCP credentials).
 
 ## Quick start
 
 ```bash
-# 1. Infra
+# 1. Infra (Postgres :5433, Redis, MinIO :9010)
 cp .env.example .env
 docker compose up -d
 
 # 2. DB
 npm install
-npx prisma migrate dev --name phase1_foundation
+npx prisma migrate deploy
 npm run prisma:seed
 
 # 3. API
 npm run dev
-# → http://localhost:3001/health
+# → http://localhost:3002/health
 ```
 
-## Web (sibling repo)
-
-Web scaffold lives in `./web` for now (sandbox could not create `../manage-teams-web`). Move when ready:
-
-```bash
-mv web ../manage-teams-web
-cd ../manage-teams-web
-cp .env.example .env
-npm install
-npm run dev
-# → http://localhost:5173
-```
-
-Or run in place:
+## Web
 
 ```bash
 cd web && npm install && npm run dev
+# → http://localhost:5173
 ```
 
 ## Google OAuth (login)
 
-Hướng dẫn chi tiết: [`docs/GOOGLE_OAUTH.md`](docs/GOOGLE_OAUTH.md)
+See [`docs/GOOGLE_OAUTH.md`](docs/GOOGLE_OAUTH.md).
 
-Cần điền vào `.env` (API):
+## Google Chat Bot (Phases 8–10)
 
-- `GOOGLE_CLIENT_ID`
-- `GOOGLE_CLIENT_SECRET`
-- `GOOGLE_CALLBACK_URL=http://localhost:3002/auth/google/callback`
+Set in `.env`:
 
-Authorized redirect URI in Google Cloud Console must match callback URL.
+- `GCHAT_ENABLED=true`
+- `GCHAT_PUBSUB_SUBSCRIPTION=projects/.../subscriptions/...`
+- `GCHAT_SERVICE_ACCOUNT_JSON` (or reuse `GOOGLE_SERVICE_ACCOUNT_JSON`)
+
+Without these, Pub/Sub worker stays off; connect/send APIs return 503.
+
+## Production checklist (Phase 12)
+
+- [ ] Strong JWT secrets + `TOKEN_ENCRYPTION_KEY`
+- [ ] `COOKIE_SECURE=true` behind HTTPS
+- [ ] Rotate GitHub webhook secret / MinIO keys
+- [ ] Enable GChat only with least-privilege SA
+- [ ] Monitor Redis + BullMQ failed jobs
+- [ ] Run `npm test` in CI
 
 ## Docs
 
-- Design: `docs/superpowers/specs/2026-09-25-phase1-foundation-design.md`
-- Plan: `docs/superpowers/plans/2026-09-25-phase1-foundation.md`
+- Specs/plans: `docs/superpowers/`
 - OpenAPI: `openapi/openapi.yaml`
 
 ## Manual smoke checklist
@@ -60,3 +60,4 @@ Authorized redirect URI in Google Cloud Console must match callback URL.
 2. Create team, confirm you are lead
 3. Home → Add organization user → invite that email on a team
 4. Second browser/login as member → can view, cannot edit team
+5. `GET /teams/:id/dashboard` returns aggregated snapshot

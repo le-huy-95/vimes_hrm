@@ -86,6 +86,24 @@ enum ChannelType {
   direct
 }
 
+enum GchatSyncStatus {
+  active
+  expired
+  error
+}
+
+enum GchatMessageSource {
+  google
+  app
+}
+
+enum GchatMessageSyncStatus {
+  pending
+  sent
+  confirmed
+  failed
+}
+
 model Organization {
   id        String   @id @default(cuid())
   name      String
@@ -127,6 +145,8 @@ model User {
   uploadedFiles              File[]                @relation("FileUploader")
   messagesSent               Message[]             @relation("MessageSender")
   messageReads               MessageReadStatus[]
+  gchatMessages              GchatMessage[]        @relation("GchatSenderUser")
+  idempotencyKeys            IdempotencyKey[]
 
   @@index([orgId])
   @@map("users")
@@ -165,6 +185,7 @@ model Team {
   githubActivity   GithubActivityEvent[]
   projects         Project[]
   channels         Channel[]
+  gchatSpaces      GchatSpace[]
 
   @@index([orgId])
   @@index([parentTeamId])
@@ -511,4 +532,85 @@ model MessageReadStatus {
   @@unique([messageId, userId])
   @@index([userId])
   @@map("message_read_status")
+}
+
+model GchatSpace {
+  id                     String         @id @default(cuid())
+  teamId                 String         @map("team_id")
+  googleSpaceId          String         @unique @map("google_space_id")
+  displayName            String         @map("display_name")
+  subscriptionId         String?        @map("subscription_id")
+  subscriptionExpireTime DateTime?      @map("subscription_expire_time")
+  syncStatus             GchatSyncStatus @default(active) @map("sync_status")
+  createdAt              DateTime       @default(now()) @map("created_at")
+
+  team     Team                      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  messages GchatMessage[]
+  health   GchatSubscriptionHealth?
+
+  @@index([teamId])
+  @@map("gchat_spaces")
+}
+
+model GchatDmMapping {
+  id            String   @id @default(cuid())
+  userAId       String   @map("user_a_id")
+  userBId       String   @map("user_b_id")
+  googleSpaceId String   @map("google_space_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@unique([userAId, userBId])
+  @@index([googleSpaceId])
+  @@map("gchat_dm_mapping")
+}
+
+model GchatMessage {
+  id              String                 @id @default(cuid())
+  gchatSpaceId    String                 @map("gchat_space_id")
+  googleMessageId String                 @unique @map("google_message_id")
+  senderGoogleId  String?                @map("sender_google_id")
+  senderUserId    String?                @map("sender_user_id")
+  textContent     String                 @map("text_content")
+  threadId        String?                @map("thread_id")
+  source          GchatMessageSource
+  syncStatus      GchatMessageSyncStatus @default(pending) @map("sync_status")
+  isDeleted       Boolean                @default(false) @map("is_deleted")
+  createdTime     DateTime               @map("created_time")
+  updatedTime     DateTime?              @map("updated_time")
+  rawPayload      Json?                  @map("raw_payload")
+
+  space  GchatSpace @relation(fields: [gchatSpaceId], references: [id], onDelete: Cascade)
+  sender User?      @relation("GchatSenderUser", fields: [senderUserId], references: [id], onDelete: SetNull)
+
+  @@index([gchatSpaceId, createdTime])
+  @@map("gchat_messages")
+}
+
+model GchatSubscriptionHealth {
+  id                  String    @id @default(cuid())
+  gchatSpaceId        String    @unique @map("gchat_space_id")
+  status              String    @default("ok")
+  lastEventReceivedAt DateTime? @map("last_event_received_at")
+  lastRenewAt         DateTime? @map("last_renew_at")
+  errorMessage        String?   @map("error_message")
+
+  space GchatSpace @relation(fields: [gchatSpaceId], references: [id], onDelete: Cascade)
+
+  @@map("gchat_subscription_health")
+}
+
+model IdempotencyKey {
+  id             String   @id @default(cuid())
+  key            String
+  userId         String   @map("user_id")
+  route          String
+  responseStatus Int      @map("response_status")
+  responseBody   Json     @map("response_body")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([key, userId])
+  @@index([createdAt])
+  @@map("idempotency_keys")
 }

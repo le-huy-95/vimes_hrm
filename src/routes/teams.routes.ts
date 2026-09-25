@@ -9,6 +9,7 @@ import {
   chatController,
   dashboardController,
   fileController,
+  gchatController,
   githubTeamController,
   projectController,
   taskController,
@@ -16,6 +17,7 @@ import {
 } from "../container.js";
 import { authenticateJWT } from "../middleware/auth.js";
 import { requireTeamPermission } from "../middleware/rbac.js";
+import { idempotency } from "../middleware/idempotency.js";
 
 export const teamsRouter = Router();
 
@@ -36,6 +38,25 @@ teamsRouter.get(
   dashboardController.get,
 );
 
+// Google Chat Bot (Phases 8–10)
+teamsRouter.get(
+  "/:teamId/gchat/spaces",
+  requireTeamPermission("team:view"),
+  gchatController.listSpaces,
+);
+teamsRouter.post(
+  "/:teamId/gchat/spaces",
+  requireTeamPermission("team:manage"),
+  idempotency(),
+  gchatController.connectSpace,
+);
+teamsRouter.post(
+  "/:teamId/gchat/spaces/:spaceId/messages",
+  requireTeamPermission("team:view"),
+  idempotency(),
+  gchatController.sendMessage,
+);
+
 // Chat
 teamsRouter.get(
   "/:teamId/channels",
@@ -50,6 +71,7 @@ teamsRouter.get(
 teamsRouter.post(
   "/:teamId/channels/:channelId/messages",
   requireTeamPermission("team:view"),
+  idempotency(),
   chatController.createMessage,
 );
 

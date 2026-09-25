@@ -48,6 +48,15 @@ const envSchema = z.object({
     .transform((v) => v === "true"),
   S3_PUBLIC_URL: z.string().default("http://localhost:9010"),
   FILE_MAX_BYTES: z.coerce.number().default(20971520),
+  GCHAT_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
+  GCHAT_PUBSUB_SUBSCRIPTION: z.string().optional().default(""),
+  GCHAT_SERVICE_ACCOUNT_JSON: z.string().optional().default(""),
+  GCHAT_RENEW_CRON: z.string().default("0 */6 * * *"),
+  GCHAT_BACKUP_CRON: z.string().default("0 3 * * *"),
+  GCHAT_STALE_HOURS: z.coerce.number().default(6),
   WEB_ORIGIN: z.string().default("http://localhost:5173"),
   COOKIE_SECURE: z
     .enum(["true", "false"])
@@ -79,3 +88,11 @@ export const githubAppEnabled =
   Boolean(env.GITHUB_APP_PRIVATE_KEY?.trim()) &&
   Boolean(env.GITHUB_APP_SLUG?.trim()) &&
   Boolean(env.GITHUB_WEBHOOK_SECRET?.trim());
+
+export const gchatEnabled =
+  env.GCHAT_ENABLED &&
+  Boolean(env.GCHAT_PUBSUB_SUBSCRIPTION?.trim()) &&
+  Boolean(
+    env.GCHAT_SERVICE_ACCOUNT_JSON?.trim() ||
+      env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim(),
+  );
