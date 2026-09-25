@@ -6,6 +6,7 @@
  */
 import { Router } from "express";
 import {
+  fileController,
   githubTeamController,
   projectController,
   taskController,
@@ -130,6 +131,23 @@ teamsRouter.delete(
   "/:teamId/tasks/:taskId/comments/:commentId",
   requireTeamPermission("task:write"),
   taskController.removeComment,
+);
+
+// Task attachments
+teamsRouter.get(
+  "/:teamId/tasks/:taskId/attachments",
+  requireTeamPermission("team:view"),
+  fileController.listTaskAttachments,
+);
+teamsRouter.post(
+  "/:teamId/tasks/:taskId/attachments",
+  requireTeamPermission("task:write"),
+  fileController.attachToTask,
+);
+teamsRouter.delete(
+  "/:teamId/tasks/:taskId/attachments/:fileId",
+  requireTeamPermission("task:write"),
+  fileController.detachFromTask,
 );
 
 teamsRouter.get(

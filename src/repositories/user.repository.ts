@@ -96,4 +96,8 @@ export class UserRepository extends BaseRepository {
   linkGoogleId(userId: string, googleUserId: string) {
     return this.db.user.update({ where: { id: userId }, data: { googleUserId } });
   }
+
+  updateAvatarFile(userId: string, avatarFileId: string | null) {
+    return this.db.user.update({ where: { id: userId }, data: { avatarFileId } });
+  }
 }

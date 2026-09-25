@@ -2,7 +2,7 @@
  * Organization routes — JWT required except Workspace OAuth callback.
  */
 import { Router } from "express";
-import { orgController, workspaceSyncController } from "../container.js";
+import { fileController, orgController, workspaceSyncController } from "../container.js";
 import { authenticateJWT } from "../middleware/auth.js";
 
 export const orgsRouter = Router();
@@ -18,6 +18,7 @@ orgsRouter.get("/me", orgController.getMe);
 orgsRouter.patch("/me", orgController.updateMe);
 // Tạo user cùng org (phục vụ invite vào team bằng email)
 orgsRouter.post("/me/users", orgController.createUser);
+orgsRouter.patch("/me/avatar", fileController.setAvatar);
 
 // Workspace connect + Directory sync
 orgsRouter.get("/me/workspace/auth-status", workspaceSyncController.authStatus);

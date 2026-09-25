@@ -8,6 +8,7 @@ import { env } from "./lib/env.js";
 import { container } from "./container.js";
 import { startWorkspaceSyncWorker } from "./workers/google-workspace.worker.js";
 import { startGithubWorkers } from "./workers/github.worker.js";
+import { startThumbnailWorker } from "./workers/thumbnail.worker.js";
 
 const app = createApp();
 
@@ -20,10 +21,12 @@ const githubWorkers = startGithubWorkers(
   container.services.githubWebhook,
   container.services.githubSync,
 );
+const thumbnailWorker = startThumbnailWorker(container.repositories.file);
 
 async function shutdown(signal: string) {
   console.log(`received ${signal}, shutting down…`);
   await githubWorkers.close();
+  await thumbnailWorker.close();
   await worker.close();
   server.close();
   process.exit(0);
