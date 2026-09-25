@@ -80,6 +80,12 @@ enum FileStatus {
   failed
 }
 
+enum ChannelType {
+  team
+  project
+  direct
+}
+
 model Organization {
   id        String   @id @default(cuid())
   name      String
@@ -119,6 +125,8 @@ model User {
   taskComments               TaskComment[]
   avatarFile                 File?                 @relation("UserAvatar", fields: [avatarFileId], references: [id])
   uploadedFiles              File[]                @relation("FileUploader")
+  messagesSent               Message[]             @relation("MessageSender")
+  messageReads               MessageReadStatus[]
 
   @@index([orgId])
   @@map("users")
@@ -156,6 +164,7 @@ model Team {
   githubRepos      GithubRepo[]
   githubActivity   GithubActivityEvent[]
   projects         Project[]
+  channels         Channel[]
 
   @@index([orgId])
   @@index([parentTeamId])
@@ -432,6 +441,7 @@ model File {
   uploader    User             @relation("FileUploader", fields: [uploaderId], references: [id], onDelete: Cascade)
   avatarUsers User[]           @relation("UserAvatar")
   attachments TaskAttachment[]
+  messages    Message[]
 
   @@index([orgId])
   @@index([uploaderId])
@@ -451,4 +461,54 @@ model TaskAttachment {
   @@index([taskId])
   @@index([fileId])
   @@map("task_attachments")
+}
+
+model Channel {
+  id        String      @id @default(cuid())
+  teamId    String      @map("team_id")
+  projectId String?     @map("project_id")
+  name      String
+  type      ChannelType
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  team     Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@unique([teamId, type])
+  @@index([teamId])
+  @@map("channels")
+}
+
+model Message {
+  id               String   @id @default(cuid())
+  channelId        String   @map("channel_id")
+  senderId         String   @map("sender_id")
+  content          String
+  attachmentFileId String?  @map("attachment_file_id")
+  replyToId        String?  @map("reply_to_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  channel    Channel             @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  sender     User                @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  attachment File?               @relation(fields: [attachmentFileId], references: [id], onDelete: SetNull)
+  replyTo    Message?            @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies    Message[]           @relation("MessageReplies")
+  reads      MessageReadStatus[]
+
+  @@index([channelId, createdAt])
+  @@map("messages")
+}
+
+model MessageReadStatus {
+  id        String   @id @default(cuid())
+  messageId String   @map("message_id")
+  userId    String   @map("user_id")
+  readAt    DateTime @default(now()) @map("read_at")
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId])
+  @@map("message_read_status")
 }

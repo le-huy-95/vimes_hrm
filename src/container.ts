@@ -26,6 +26,8 @@ import { ProjectRepository } from "./repositories/project.repository.js";
 import { FileRepository } from "./repositories/file.repository.js";
 import { TaskAttachmentRepository } from "./repositories/task-attachment.repository.js";
 import { TaskRepository } from "./repositories/task.repository.js";
+import { ChannelRepository } from "./repositories/channel.repository.js";
+import { MessageRepository } from "./repositories/message.repository.js";
 import { SessionService } from "./services/session.service.js";
 import { AuthService } from "./services/auth.service.js";
 import { OrgService } from "./services/org.service.js";
@@ -38,6 +40,7 @@ import { GithubWebhookService } from "./services/github-webhook.service.js";
 import { ProjectService } from "./services/project.service.js";
 import { FileService } from "./services/file.service.js";
 import { TaskService } from "./services/task.service.js";
+import { ChatService } from "./services/chat.service.js";
 import { AuthController } from "./controllers/auth.controller.js";
 import { OrgController } from "./controllers/org.controller.js";
 import { TeamController } from "./controllers/team.controller.js";
@@ -45,6 +48,7 @@ import { WorkspaceSyncController } from "./controllers/workspace-sync.controller
 import { ProjectController } from "./controllers/project.controller.js";
 import { FileController } from "./controllers/file.controller.js";
 import { TaskController } from "./controllers/task.controller.js";
+import { ChatController } from "./controllers/chat.controller.js";
 import { GithubTeamController } from "./controllers/github-team.controller.js";
 import { GithubWebhookController } from "./controllers/github-webhook.controller.js";
 
@@ -67,6 +71,8 @@ const projectRepository = new ProjectRepository(prisma);
 const taskRepository = new TaskRepository(prisma);
 const fileRepository = new FileRepository(prisma);
 const taskAttachmentRepository = new TaskAttachmentRepository(prisma);
+const channelRepository = new ChannelRepository(prisma);
+const messageRepository = new MessageRepository(prisma);
 
 // --- Tầng Service: nghiệp vụ, không set HTTP status ---
 const sessionService = new SessionService(refreshTokenRepository);
@@ -153,6 +159,13 @@ const fileService = new FileService(
   userRepository,
 );
 
+const chatService = new ChatService(
+  channelRepository,
+  messageRepository,
+  teamRepository,
+  fileRepository,
+);
+
 // --- Tầng Controller: nhận request, trả response ---
 export const authController = new AuthController(authService);
 export const orgController = new OrgController(orgService);
@@ -171,6 +184,7 @@ export const githubWebhookController = new GithubWebhookController(
 export const projectController = new ProjectController(projectService);
 export const taskController = new TaskController(taskService);
 export const fileController = new FileController(fileService);
+export const chatController = new ChatController(chatService);
 
 /** Object gom toàn bộ dependency — tiện debug / test sau này. */
 export const container = {
@@ -194,6 +208,8 @@ export const container = {
     task: taskRepository,
     file: fileRepository,
     taskAttachment: taskAttachmentRepository,
+    channel: channelRepository,
+    message: messageRepository,
   },
   services: {
     session: sessionService,
@@ -208,6 +224,7 @@ export const container = {
     project: projectService,
     task: taskService,
     file: fileService,
+    chat: chatService,
   },
   controllers: {
     auth: authController,
@@ -219,5 +236,6 @@ export const container = {
     project: projectController,
     task: taskController,
     file: fileController,
+    chat: chatController,
   },
 };

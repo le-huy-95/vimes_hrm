@@ -1,11 +1,12 @@
 /**
  * Điểm vào ứng dụng API.
  * Tạo Express app rồi lắng nghe cổng từ biến môi trường,
- * đồng thời khởi động BullMQ worker cho Google Workspace sync.
+ * đồng thời khởi động BullMQ workers và Socket.IO chat.
  */
 import { createApp } from "./app.js";
 import { env } from "./lib/env.js";
 import { container } from "./container.js";
+import { createChatSocket } from "./lib/socket.js";
 import { startWorkspaceSyncWorker } from "./workers/google-workspace.worker.js";
 import { startGithubWorkers } from "./workers/github.worker.js";
 import { startThumbnailWorker } from "./workers/thumbnail.worker.js";
@@ -14,6 +15,10 @@ const app = createApp();
 
 const server = app.listen(env.PORT, () => {
   console.log(`API listening on http://localhost:${env.PORT}`);
+});
+
+void createChatSocket(server, container.services.chat).catch((err) => {
+  console.error("Socket.IO failed to start", err);
 });
 
 const worker = startWorkspaceSyncWorker(container.services.workspaceSync);

@@ -332,6 +332,53 @@ paths:
       responses:
         "200":
           description: OK
+  /teams/{teamId}/channels:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: List team channels; ensures default general channel (team:view)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "200":
+          description: OK
+  /teams/{teamId}/channels/{channelId}/messages:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: List channel messages (team:view). Also available via Socket.IO.
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+        - $ref: "#/components/parameters/channelId"
+        - in: query
+          name: after
+          schema: { type: string }
+        - in: query
+          name: before
+          schema: { type: string }
+        - in: query
+          name: take
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        "200":
+          description: OK
+    post:
+      security: [{ bearerAuth: [] }]
+      summary: Create message (team:view). Prefer Socket.IO send_message for realtime.
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+        - $ref: "#/components/parameters/channelId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content: { type: string }
+                attachmentFileId: { type: string }
+                replyToId: { type: string }
+      responses:
+        "201":
+          description: Created
   /teams/{teamId}/projects:
     get:
       security: [{ bearerAuth: [] }]
@@ -621,6 +668,11 @@ components:
     fileId:
       in: path
       name: fileId
+      required: true
+      schema: { type: string }
+    channelId:
+      in: path
+      name: channelId
       required: true
       schema: { type: string }
   schemas:

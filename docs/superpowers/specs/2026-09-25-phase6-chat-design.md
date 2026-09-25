@@ -1,7 +1,7 @@
 # Phase 6 Design — Internal Chat (Socket.IO)
 
 **Date:** 2026-09-25  
-**Status:** Approved; implementing  
+**Status:** Implemented  
 **Depends on:** Phase 1 (JWT/teams), Phase 5 (optional file_id on messages)  
 **Scope:** **A** — API + Socket.IO only; team channels; no web UI; no DM/project channels
 

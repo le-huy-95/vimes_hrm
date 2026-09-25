@@ -6,6 +6,7 @@
  */
 import { Router } from "express";
 import {
+  chatController,
   fileController,
   githubTeamController,
   projectController,
@@ -27,6 +28,23 @@ teamsRouter.use(authenticateJWT);
 
 teamsRouter.get("/", teamController.list);
 teamsRouter.post("/", teamController.create);
+
+// Chat
+teamsRouter.get(
+  "/:teamId/channels",
+  requireTeamPermission("team:view"),
+  chatController.listChannels,
+);
+teamsRouter.get(
+  "/:teamId/channels/:channelId/messages",
+  requireTeamPermission("team:view"),
+  chatController.listMessages,
+);
+teamsRouter.post(
+  "/:teamId/channels/:channelId/messages",
+  requireTeamPermission("team:view"),
+  chatController.createMessage,
+);
 
 // GitHub App connect (team-scoped, JWT + RBAC)
 teamsRouter.get(
