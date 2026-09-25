@@ -1,7 +1,7 @@
 # Phase 2 Design — Google Workspace Directory Sync
 
 **Date:** 2026-09-25  
-**Status:** Approved; implementation plan next  
+**Status:** Implemented on branch `feature/phase2-google-workspace-sync` (worktree)  
 **Depends on:** Phase 1 foundation (auth, org, teams, RBAC, MVC layered API)  
 **Source:** `/Users/huy/Downloads/ke-hoach-tich-hop-he-thong.md` §4 + Phase 1 roadmap  
 **Primary repo:** `manage-teams` (API)
