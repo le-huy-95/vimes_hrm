@@ -1,10 +1,10 @@
 openapi: 3.0.3
 info:
   title: Manage Teams API
-  version: 0.1.0
-  description: Phase 1 — auth, orgs, teams, members
+  version: 0.3.0
+  description: Auth, orgs, teams, Google Workspace sync, GitHub App + webhooks
 servers:
-  - url: http://localhost:3001
+  - url: http://localhost:3002
 paths:
   /health:
     get:
@@ -252,6 +252,109 @@ paths:
       responses:
         "201":
           description: Created
+  /teams/github/install/callback:
+    get:
+      summary: GitHub App install callback (public; state cookie)
+      parameters:
+        - in: query
+          name: installation_id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: state
+          required: true
+          schema: { type: string }
+      responses:
+        "302":
+          description: Redirect to web app
+  /teams/{teamId}/github/install-url:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: Get GitHub App install URL (team:manage)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url: { type: string }
+  /teams/{teamId}/github/connection:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: Get GitHub connection status (team:view)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "200":
+          description: Connection or null
+    delete:
+      security: [{ bearerAuth: [] }]
+      summary: Disconnect GitHub App (team:manage)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "204":
+          description: No content
+  /teams/{teamId}/github/repos:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: List synced GitHub repos (team:view)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "200":
+          description: OK
+  /teams/{teamId}/github/sync:
+    post:
+      security: [{ bearerAuth: [] }]
+      summary: Enqueue repo sync (team:manage)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "202":
+          description: Accepted
+  /teams/{teamId}/github/activity:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: Paginated GitHub activity feed (team:view)
+      parameters:
+        - $ref: "#/components/parameters/teamId"
+        - in: query
+          name: cursor
+          schema: { type: string }
+        - in: query
+          name: take
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        "200":
+          description: OK
+  /webhooks/github:
+    post:
+      summary: GitHub App webhook (HMAC signature; no JWT)
+      parameters:
+        - in: header
+          name: X-Hub-Signature-256
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-GitHub-Delivery
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-GitHub-Event
+          required: true
+          schema: { type: string }
+      responses:
+        "202":
+          description: Accepted
+        "200":
+          description: Duplicate delivery
+        "401":
+          description: Invalid signature
 components:
   securitySchemes:
     bearerAuth:
