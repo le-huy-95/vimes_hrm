@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:manage_teams_app/data/models/auth_models.dart';
+import 'package:manage_teams_app/data/models/integration_models.dart';
+import 'package:manage_teams_app/domain/repositories/integration_repository.dart';
 import 'package:manage_teams_app/domain/repositories/org_repository.dart';
 import 'package:manage_teams_app/features/auth/bloc/auth_bloc.dart';
 import 'package:manage_teams_app/features/auth/bloc/auth_event.dart';
@@ -10,6 +12,7 @@ import 'package:manage_teams_app/features/shell/bloc/shell_cubit.dart';
 import 'package:manage_teams_app/shared/widgets/adaptive_scaffold.dart';
 import 'package:manage_teams_app/shared/widgets/service_link_tile.dart';
 import 'package:manage_teams_app/shared/widgets/teams_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AppShellPage extends StatefulWidget {
   const AppShellPage({super.key, required this.child});
@@ -25,6 +28,13 @@ class _AppShellPageState extends State<AppShellPage> {
   void initState() {
     super.initState();
     context.read<ShellCubit>().load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final teamId = GoRouterState.of(context).pathParameters['teamId'];
+    context.read<ShellCubit>().setSelectedTeam(teamId);
   }
 
   @override
@@ -65,8 +75,34 @@ class _Sidebar extends StatelessWidget {
   final String orgName;
   final void Function(String teamId) onPickTeam;
 
+  Future<void> _launchConnect(
+    BuildContext context,
+    Future<String> Function() getUrl,
+  ) async {
+    try {
+      final url = await getUrl();
+      final uri = Uri.parse(url);
+      await launchUrl(uri, mode: LaunchMode.platformDefault, webOnlyWindowName: '_self');
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final integrations = context.select<ShellCubit, IntegrationStatus>((c) {
+      final s = c.state;
+      return s is ShellLoaded ? s.integrations : IntegrationStatus.empty;
+    });
+    final teamId = context.select<ShellCubit, String?>((c) {
+      final s = c.state;
+      return s is ShellLoaded ? s.selectedTeamId : null;
+    });
+    final repo = context.read<IntegrationRepository>();
+
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -120,16 +156,77 @@ class _Sidebar extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Text('Google', style: Theme.of(context).textTheme.labelLarge),
           ),
-          const ServiceLinkTile(label: 'Đăng nhập Google', linked: false),
-          const ServiceLinkTile(label: 'Google Tasks', linked: false),
-          const ServiceLinkTile(label: 'Workspace Directory', linked: false),
-          const ServiceLinkTile(label: 'Google Chat', linked: false),
+          ServiceLinkTile(
+            label: 'Đăng nhập Google',
+            linked: integrations.google.login,
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Dùng nút Google trên trang Đăng nhập'),
+                ),
+              );
+            },
+          ),
+          ServiceLinkTile(
+            label: 'Google Tasks',
+            linked: integrations.google.tasks,
+            onTap: teamId == null
+                ? () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Chọn một nhóm trước')),
+                    );
+                  }
+                : () => _launchConnect(
+                      context,
+                      () => repo.googleTasksConnectUrl(teamId),
+                    ),
+          ),
+          ServiceLinkTile(
+            label: 'Workspace Directory',
+            linked: integrations.google.workspace,
+            onTap: () => _launchConnect(
+              context,
+              repo.workspaceConnectUrl,
+            ),
+          ),
+          ServiceLinkTile(
+            label: 'Google Chat',
+            linked: integrations.google.gchat,
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Google Chat cấu hình qua API')),
+              );
+            },
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Text('GitHub', style: Theme.of(context).textTheme.labelLarge),
           ),
-          const ServiceLinkTile(label: 'GitHub App', linked: false),
-          const ServiceLinkTile(label: 'Repos nhóm', linked: false),
+          ServiceLinkTile(
+            label: 'GitHub App',
+            linked: integrations.github.app,
+            onTap: teamId == null
+                ? () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Chọn một nhóm trước')),
+                    );
+                  }
+                : () => _launchConnect(
+                      context,
+                      () => repo.githubInstallUrl(teamId),
+                    ),
+          ),
+          ServiceLinkTile(
+            label: 'Repos nhóm',
+            linked: integrations.github.repos,
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Repos cập nhật sau khi cài GitHub App'),
+                ),
+              );
+            },
+          ),
           const Divider(),
           const _AddOrgUserForm(),
         ],

@@ -7,9 +7,11 @@ import 'package:manage_teams_app/core/network/auth_interceptor.dart';
 import 'package:manage_teams_app/core/network/dio_client.dart';
 import 'package:manage_teams_app/core/storage/token_store.dart';
 import 'package:manage_teams_app/data/repositories/auth_repository_impl.dart';
+import 'package:manage_teams_app/data/repositories/integration_repository_impl.dart';
 import 'package:manage_teams_app/data/repositories/org_repository_impl.dart';
 import 'package:manage_teams_app/data/repositories/team_repository_impl.dart';
 import 'package:manage_teams_app/domain/repositories/auth_repository.dart';
+import 'package:manage_teams_app/domain/repositories/integration_repository.dart';
 import 'package:manage_teams_app/domain/repositories/org_repository.dart';
 import 'package:manage_teams_app/domain/repositories/team_repository.dart';
 import 'package:manage_teams_app/features/auth/bloc/auth_bloc.dart';
@@ -28,6 +30,7 @@ class _ManageTeamsAppState extends State<ManageTeamsApp> {
   late final AuthRepository _authRepository;
   late final TeamRepository _teamRepository;
   late final OrgRepository _orgRepository;
+  late final IntegrationRepository _integrationRepository;
   late final AuthBloc _authBloc;
   late final ShellCubit _shellCubit;
   late final AppRouter _appRouter;
@@ -39,7 +42,11 @@ class _ManageTeamsAppState extends State<ManageTeamsApp> {
     _authRepository = AuthRepositoryImpl(tokenStore: _tokenStore);
     _teamRepository = TeamRepositoryImpl();
     _orgRepository = OrgRepositoryImpl();
-    _shellCubit = ShellCubit(teamRepository: _teamRepository);
+    _integrationRepository = IntegrationRepositoryImpl();
+    _shellCubit = ShellCubit(
+      teamRepository: _teamRepository,
+      integrationRepository: _integrationRepository,
+    );
 
     final dio = DioClient.instance;
     late final AuthBloc authBloc;
@@ -74,6 +81,9 @@ class _ManageTeamsAppState extends State<ManageTeamsApp> {
         RepositoryProvider<AuthRepository>.value(value: _authRepository),
         RepositoryProvider<TeamRepository>.value(value: _teamRepository),
         RepositoryProvider<OrgRepository>.value(value: _orgRepository),
+        RepositoryProvider<IntegrationRepository>.value(
+          value: _integrationRepository,
+        ),
         RepositoryProvider<TokenStore>.value(value: _tokenStore),
       ],
       child: MultiBlocProvider(
