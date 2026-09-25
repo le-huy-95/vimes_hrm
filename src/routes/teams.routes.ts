@@ -7,6 +7,8 @@
 import { Router } from "express";
 import {
   githubTeamController,
+  projectController,
+  taskController,
   teamController,
 } from "../container.js";
 import { authenticateJWT } from "../middleware/auth.js";
@@ -55,6 +57,79 @@ teamsRouter.get(
   "/:teamId/github/activity",
   requireTeamPermission("team:view"),
   githubTeamController.listActivity,
+);
+
+// Projects (team-scoped)
+teamsRouter.get(
+  "/:teamId/projects",
+  requireTeamPermission("team:view"),
+  projectController.list,
+);
+teamsRouter.post(
+  "/:teamId/projects",
+  requireTeamPermission("team:manage"),
+  projectController.create,
+);
+teamsRouter.get(
+  "/:teamId/projects/:projectId",
+  requireTeamPermission("team:view"),
+  projectController.getOne,
+);
+teamsRouter.patch(
+  "/:teamId/projects/:projectId",
+  requireTeamPermission("team:manage"),
+  projectController.update,
+);
+teamsRouter.delete(
+  "/:teamId/projects/:projectId",
+  requireTeamPermission("team:manage"),
+  projectController.remove,
+);
+
+// Tasks within a project
+teamsRouter.get(
+  "/:teamId/projects/:projectId/tasks",
+  requireTeamPermission("team:view"),
+  taskController.list,
+);
+teamsRouter.post(
+  "/:teamId/projects/:projectId/tasks",
+  requireTeamPermission("task:write"),
+  taskController.create,
+);
+
+// Tasks (flat, team-scoped)
+teamsRouter.get(
+  "/:teamId/tasks/:taskId",
+  requireTeamPermission("team:view"),
+  taskController.getOne,
+);
+teamsRouter.patch(
+  "/:teamId/tasks/:taskId",
+  requireTeamPermission("task:write"),
+  taskController.update,
+);
+teamsRouter.delete(
+  "/:teamId/tasks/:taskId",
+  requireTeamPermission("task:write"),
+  taskController.remove,
+);
+
+// Task comments
+teamsRouter.get(
+  "/:teamId/tasks/:taskId/comments",
+  requireTeamPermission("team:view"),
+  taskController.listComments,
+);
+teamsRouter.post(
+  "/:teamId/tasks/:taskId/comments",
+  requireTeamPermission("task:write"),
+  taskController.addComment,
+);
+teamsRouter.delete(
+  "/:teamId/tasks/:taskId/comments/:commentId",
+  requireTeamPermission("task:write"),
+  taskController.removeComment,
 );
 
 teamsRouter.get(

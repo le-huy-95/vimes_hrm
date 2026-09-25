@@ -22,6 +22,8 @@ import { GithubConnectionRepository } from "./repositories/github-connection.rep
 import { GithubRepoRepository } from "./repositories/github-repo.repository.js";
 import { GithubActivityRepository } from "./repositories/github-activity.repository.js";
 import { GithubDeliveryRepository } from "./repositories/github-delivery.repository.js";
+import { ProjectRepository } from "./repositories/project.repository.js";
+import { TaskRepository } from "./repositories/task.repository.js";
 import { SessionService } from "./services/session.service.js";
 import { AuthService } from "./services/auth.service.js";
 import { OrgService } from "./services/org.service.js";
@@ -31,10 +33,14 @@ import { WorkspaceSyncService } from "./services/workspace-sync.service.js";
 import { GithubAppService } from "./services/github-app.service.js";
 import { GithubSyncService } from "./services/github-sync.service.js";
 import { GithubWebhookService } from "./services/github-webhook.service.js";
+import { ProjectService } from "./services/project.service.js";
+import { TaskService } from "./services/task.service.js";
 import { AuthController } from "./controllers/auth.controller.js";
 import { OrgController } from "./controllers/org.controller.js";
 import { TeamController } from "./controllers/team.controller.js";
 import { WorkspaceSyncController } from "./controllers/workspace-sync.controller.js";
+import { ProjectController } from "./controllers/project.controller.js";
+import { TaskController } from "./controllers/task.controller.js";
 import { GithubTeamController } from "./controllers/github-team.controller.js";
 import { GithubWebhookController } from "./controllers/github-webhook.controller.js";
 
@@ -53,6 +59,8 @@ const githubConnectionRepository = new GithubConnectionRepository(prisma);
 const githubRepoRepository = new GithubRepoRepository(prisma);
 const githubActivityRepository = new GithubActivityRepository(prisma);
 const githubDeliveryRepository = new GithubDeliveryRepository(prisma);
+const projectRepository = new ProjectRepository(prisma);
+const taskRepository = new TaskRepository(prisma);
 
 // --- Tầng Service: nghiệp vụ, không set HTTP status ---
 const sessionService = new SessionService(refreshTokenRepository);
@@ -114,6 +122,22 @@ const githubWebhookService = new GithubWebhookService(
   githubRepoRepository,
   githubActivityRepository,
   githubSyncService,
+  taskRepository,
+);
+
+const projectService = new ProjectService(
+  prisma,
+  projectRepository,
+  teamRepository,
+  auditRepository,
+);
+
+const taskService = new TaskService(
+  prisma,
+  taskRepository,
+  projectRepository,
+  teamRepository,
+  auditRepository,
 );
 
 // --- Tầng Controller: nhận request, trả response ---
@@ -131,6 +155,8 @@ export const githubTeamController = new GithubTeamController(
 export const githubWebhookController = new GithubWebhookController(
   githubWebhookService,
 );
+export const projectController = new ProjectController(projectService);
+export const taskController = new TaskController(taskService);
 
 /** Object gom toàn bộ dependency — tiện debug / test sau này. */
 export const container = {
@@ -150,6 +176,8 @@ export const container = {
     githubRepo: githubRepoRepository,
     githubActivity: githubActivityRepository,
     githubDelivery: githubDeliveryRepository,
+    project: projectRepository,
+    task: taskRepository,
   },
   services: {
     session: sessionService,
@@ -161,6 +189,8 @@ export const container = {
     githubApp: githubAppService,
     githubSync: githubSyncService,
     githubWebhook: githubWebhookService,
+    project: projectService,
+    task: taskService,
   },
   controllers: {
     auth: authController,
@@ -169,5 +199,7 @@ export const container = {
     workspaceSync: workspaceSyncController,
     githubTeam: githubTeamController,
     githubWebhook: githubWebhookController,
+    project: projectController,
+    task: taskController,
   },
 };
