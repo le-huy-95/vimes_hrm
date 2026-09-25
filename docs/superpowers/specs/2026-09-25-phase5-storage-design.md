@@ -28,13 +28,13 @@
 ## 3. Config
 
 ```env
-S3_ENDPOINT=http://localhost:9000
+S3_ENDPOINT=http://localhost:9010
 S3_REGION=us-east-1
 S3_ACCESS_KEY=minio
 S3_SECRET_KEY=minio12345
 S3_BUCKET=manage-teams
 S3_FORCE_PATH_STYLE=true
-S3_PUBLIC_URL=http://localhost:9000   # optional base for display; signed URLs preferred
+S3_PUBLIC_URL=http://localhost:9010   # optional base for display; signed URLs preferred
 FILE_MAX_BYTES=20971520
 ```
 
