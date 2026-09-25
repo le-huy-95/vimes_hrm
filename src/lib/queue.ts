@@ -1,5 +1,5 @@
 import { Queue } from "bullmq";
-import { env } from "./env.js";
+import { redis } from "./redis.js";
 
 export const WORKSPACE_SYNC_QUEUE = "google-workspace-sync";
 
@@ -7,12 +7,29 @@ export function workspaceSyncJobId(orgId: string) {
   return `google-workspace-sync:${orgId}`;
 }
 
-export const workspaceSyncQueue = new Queue(WORKSPACE_SYNC_QUEUE, {
-  connection: { url: env.REDIS_URL },
-  defaultJobOptions: {
-    attempts: 5,
-    backoff: { type: "exponential", delay: 5000 },
-    removeOnComplete: 100,
-    removeOnFail: 200,
-  },
-});
+const globalForQueue = globalThis as unknown as {
+  workspaceSyncQueue?: Queue;
+};
+
+function createWorkspaceSyncQueue() {
+  return new Queue(WORKSPACE_SYNC_QUEUE, {
+    connection: redis,
+    defaultJobOptions: {
+      attempts: 5,
+      backoff: { type: "exponential", delay: 5000 },
+      removeOnComplete: 100,
+      removeOnFail: 200,
+    },
+  });
+}
+
+export const workspaceSyncQueue =
+  globalForQueue.workspaceSyncQueue ?? createWorkspaceSyncQueue();
+
+if (process.env.NODE_ENV !== "production") {
+  globalForQueue.workspaceSyncQueue = workspaceSyncQueue;
+}
+
+export async function closeWorkspaceSyncQueue(): Promise<void> {
+  await workspaceSyncQueue.close();
+}
