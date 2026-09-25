@@ -27,6 +27,7 @@ import { WorkspaceSyncService } from "./services/workspace-sync.service.js";
 import { AuthController } from "./controllers/auth.controller.js";
 import { OrgController } from "./controllers/org.controller.js";
 import { TeamController } from "./controllers/team.controller.js";
+import { WorkspaceSyncController } from "./controllers/workspace-sync.controller.js";
 
 // --- Tầng Repository: chỉ nói chuyện với Prisma ---
 const userRepository = new UserRepository(prisma);
@@ -85,6 +86,10 @@ const workspaceSyncService = new WorkspaceSyncService(
 export const authController = new AuthController(authService);
 export const orgController = new OrgController(orgService);
 export const teamController = new TeamController(teamService);
+export const workspaceSyncController = new WorkspaceSyncController(
+  workspaceAuthService,
+  workspaceSyncService,
+);
 
 /** Object gom toàn bộ dependency — tiện debug / test sau này. */
 export const container = {
@@ -113,5 +118,6 @@ export const container = {
     auth: authController,
     org: orgController,
     team: teamController,
+    workspaceSync: workspaceSyncController,
   },
 };

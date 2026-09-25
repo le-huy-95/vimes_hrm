@@ -92,6 +92,107 @@ paths:
       responses:
         "200":
           description: OK
+  /orgs/me/workspace/auth-status:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: Workspace auth status (SA / OAuth / canSync)
+      responses:
+        "200":
+          description: OK
+  /orgs/me/workspace/connect:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: Start Workspace Admin OAuth (redirect)
+      responses:
+        "302":
+          description: Redirect to Google
+  /orgs/me/workspace/connect/callback:
+    get:
+      summary: Workspace OAuth callback (state cookie; no JWT)
+      responses:
+        "302":
+          description: Redirect to web app
+  /orgs/me/google-sync:
+    post:
+      security: [{ bearerAuth: [] }]
+      summary: Enqueue Google Workspace directory sync
+      responses:
+        "202":
+          description: Queued
+  /orgs/me/google-sync/status:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: Latest sync status + lock
+      responses:
+        "200":
+          description: OK
+  /orgs/me/google-sync/logs:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: Paginated sync logs
+      parameters:
+        - in: query
+          name: take
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - in: query
+          name: skip
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: OK
+  /orgs/me/google-sync/users:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: Paginated synced Workspace users
+      parameters:
+        - in: query
+          name: cursor
+          schema: { type: string }
+        - in: query
+          name: take
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        "200":
+          description: OK
+  /orgs/me/google-groups:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: List Google Workspace groups
+      responses:
+        "200":
+          description: OK
+  /orgs/me/google-groups/{groupEmail}/team:
+    put:
+      security: [{ bearerAuth: [] }]
+      summary: Map Google group to team
+      parameters:
+        - in: path
+          name: groupEmail
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [teamId]
+              properties:
+                teamId: { type: string }
+      responses:
+        "200":
+          description: OK
+    delete:
+      security: [{ bearerAuth: [] }]
+      summary: Unmap Google group from team
+      parameters:
+        - in: path
+          name: groupEmail
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: No content
   /teams:
     get:
       security: [{ bearerAuth: [] }]
