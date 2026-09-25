@@ -8,6 +8,7 @@ import type { GithubConnectionRepository } from "../repositories/github-connecti
 import type { GithubActivityRepository } from "../repositories/github-activity.repository.js";
 import type { WorkspaceSettingsRepository } from "../repositories/workspace-settings.repository.js";
 import type { GchatRepository } from "../repositories/gchat.repository.js";
+import type { GoogleTasksRepository } from "../repositories/google-tasks.repository.js";
 
 export class IntegrationService {
   constructor(
@@ -17,6 +18,7 @@ export class IntegrationService {
     private readonly githubActivity: GithubActivityRepository,
     private readonly workspaceSettings: WorkspaceSettingsRepository,
     private readonly gchat: GchatRepository,
+    private readonly googleTasks: GoogleTasksRepository,
   ) {}
 
   private async assertTeam(orgId: string, teamId: string) {
@@ -30,7 +32,7 @@ export class IntegrationService {
   async getIntegrations(orgId: string, teamId: string) {
     await this.assertTeam(orgId, teamId);
 
-    const [members, connection, repoCount, spaces, settings, googleLinked] =
+    const [members, connection, repoCount, spaces, settings, googleLinked, tasksSettings] =
       await Promise.all([
         this.teams.listMembers(teamId),
         this.githubConnections.findByTeamId(teamId),
@@ -43,6 +45,7 @@ export class IntegrationService {
             user: { googleUserId: { not: null } },
           },
         }),
+        this.googleTasks.getSettings(teamId),
       ]);
 
     const githubLinked = members.filter((m) => m.githubLogin).length;
@@ -50,7 +53,12 @@ export class IntegrationService {
     return {
       google: {
         login: googleLinked > 0,
-        tasks: false,
+        tasks: Boolean(
+          tasksSettings?.connectedByUserId ||
+            tasksSettings?.todoListId ||
+            tasksSettings?.doingListId ||
+            tasksSettings?.doneListId,
+        ),
         workspace: Boolean(
           settings &&
             (settings.lastFullSyncAt ||

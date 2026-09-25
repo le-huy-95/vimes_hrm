@@ -86,4 +86,38 @@ export class OauthRepository extends BaseRepository {
       orderBy: { userId: "asc" },
     });
   }
+
+  upsertGoogleTasks(input: {
+    userId: string;
+    accessTokenEnc: string;
+    refreshTokenEnc?: string | null;
+    expiresAt?: Date;
+    scope?: string;
+  }) {
+    const provider: OAuthProvider = "google_tasks";
+    return this.db.oauthConnection.upsert({
+      where: { userId_provider: { userId: input.userId, provider } },
+      create: {
+        userId: input.userId,
+        provider,
+        accessTokenEnc: input.accessTokenEnc,
+        refreshTokenEnc: input.refreshTokenEnc ?? null,
+        expiresAt: input.expiresAt,
+        scope: input.scope,
+      },
+      update: {
+        accessTokenEnc: input.accessTokenEnc,
+        refreshTokenEnc:
+          input.refreshTokenEnc === undefined
+            ? undefined
+            : input.refreshTokenEnc,
+        expiresAt: input.expiresAt,
+        scope: input.scope,
+      } satisfies Prisma.OauthConnectionUpdateInput,
+    });
+  }
+
+  findGoogleTasks(userId: string) {
+    return this.findByUserAndProvider(userId, "google_tasks");
+  }
 }

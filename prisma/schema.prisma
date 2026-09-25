@@ -22,6 +22,7 @@ enum TeamRole {
 enum OAuthProvider {
   google
   google_workspace
+  google_tasks
   github
 }
 
@@ -36,6 +37,12 @@ enum SyncLogStatus {
   success
   partial
   failed
+}
+
+enum GoogleTasksListKind {
+  todo
+  doing
+  done
 }
 
 enum ProjectStatus {
@@ -147,6 +154,7 @@ model User {
   messageReads               MessageReadStatus[]
   gchatMessages              GchatMessage[]        @relation("GchatSenderUser")
   idempotencyKeys            IdempotencyKey[]
+  googleTasksConnections     TeamGoogleTasksSettings[] @relation("GoogleTasksConnectedBy")
 
   @@index([orgId])
   @@map("users")
@@ -186,6 +194,8 @@ model Team {
   projects         Project[]
   channels         Channel[]
   gchatSpaces      GchatSpace[]
+  googleTasksSettings TeamGoogleTasksSettings?
+  googleTasks      GoogleTask[]
 
   @@index([orgId])
   @@index([parentTeamId])
@@ -314,6 +324,40 @@ model SyncLog {
 
   @@index([orgId, runAt(sort: Desc)])
   @@map("sync_logs")
+}
+
+model TeamGoogleTasksSettings {
+  teamId            String    @id @map("team_id")
+  todoListId        String?   @map("todo_list_id")
+  doingListId       String?   @map("doing_list_id")
+  doneListId        String?   @map("done_list_id")
+  lastSyncedAt      DateTime? @map("last_synced_at")
+  connectedByUserId String?   @map("connected_by_user_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  team        Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  connectedBy User? @relation("GoogleTasksConnectedBy", fields: [connectedByUserId], references: [id])
+
+  @@map("team_google_tasks_settings")
+}
+
+model GoogleTask {
+  id              String             @id @default(cuid())
+  teamId          String             @map("team_id")
+  googleTaskId    String             @map("google_task_id")
+  listKind        GoogleTasksListKind @map("list_kind")
+  title           String
+  status          String
+  googleUpdatedAt DateTime?          @map("google_updated_at")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, googleTaskId])
+  @@index([teamId, listKind])
+  @@map("google_tasks")
 }
 
 model GithubConnection {

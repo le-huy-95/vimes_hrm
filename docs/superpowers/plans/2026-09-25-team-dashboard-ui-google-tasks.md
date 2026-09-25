@@ -55,9 +55,9 @@
 
 ### Task 4: Layer 3 — Google Tasks sync + real chart
 
-- [ ] Prisma `team_google_tasks_settings` + `google_tasks`
-- [ ] OAuth Tasks + BullMQ worker + bind lists APIs
-- [ ] Extend dashboard `googleTasks` counts; chart uses real data
+- [x] Prisma `team_google_tasks_settings` + `google_tasks`
+- [x] OAuth Tasks + BullMQ worker + bind lists APIs
+- [x] Extend dashboard `googleTasks` counts; chart uses real data
 
 ---
 

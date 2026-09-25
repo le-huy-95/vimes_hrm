@@ -12,10 +12,12 @@ import { startGithubWorkers } from "./workers/github.worker.js";
 import { startThumbnailWorker } from "./workers/thumbnail.worker.js";
 import { startGchatPubSubWorker } from "./workers/gchat-pubsub.worker.js";
 import { startGchatHealthWorker } from "./workers/gchat-health.worker.js";
+import { startGoogleTasksSyncWorker } from "./workers/google-tasks.worker.js";
 import { Queue } from "bullmq";
 import { redis } from "./lib/redis.js";
 import { GCHAT_HEALTH_QUEUE } from "./workers/gchat-health.worker.js";
 import { gchatEnabled } from "./lib/env.js";
+import { closeGoogleTasksQueue } from "./lib/queue.js";
 
 const app = createApp();
 
@@ -35,6 +37,9 @@ const githubWorkers = startGithubWorkers(
 const thumbnailWorker = startThumbnailWorker(container.repositories.file);
 const gchatPubSub = startGchatPubSubWorker(container.services.gchat);
 const gchatHealthWorker = startGchatHealthWorker(container.services.gchat);
+const googleTasksWorker = startGoogleTasksSyncWorker(
+  container.services.googleTasks,
+);
 
 const gchatHealthQueue = new Queue(GCHAT_HEALTH_QUEUE, { connection: redis });
 if (gchatEnabled) {
@@ -74,6 +79,8 @@ async function shutdown(signal: string) {
   await gchatHealthQueue.close();
   await githubWorkers.close();
   await thumbnailWorker.close();
+  await googleTasksWorker.close();
+  await closeGoogleTasksQueue();
   await worker.close();
   server.close();
   process.exit(0);

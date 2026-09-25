@@ -4,6 +4,7 @@ import type { PrismaClient } from "@prisma/client";
 import type { TeamRepository } from "../repositories/team.repository.js";
 import type { ChannelRepository } from "../repositories/channel.repository.js";
 import type { GithubConnectionRepository } from "../repositories/github-connection.repository.js";
+import type { GoogleTasksRepository } from "../repositories/google-tasks.repository.js";
 
 const CACHE_TTL_SEC = 60;
 const RECENT_N = 10;
@@ -18,6 +19,7 @@ export class DashboardService {
     private readonly teams: TeamRepository,
     private readonly channels: ChannelRepository,
     private readonly githubConnections: GithubConnectionRepository,
+    private readonly googleTasks: GoogleTasksRepository,
   ) {}
 
   async getDashboard(
@@ -37,43 +39,51 @@ export class DashboardService {
 
     const channel = await this.channels.ensureTeamChannel(teamId);
 
-    const [members, taskGroups, connection, repoCount, recentActivity, recentMessages] =
-      await Promise.all([
-        this.prisma.teamMember.groupBy({
-          by: ["role"],
-          where: { teamId },
-          _count: { _all: true },
-        }),
-        this.prisma.task.groupBy({
-          by: ["status"],
-          where: { project: { teamId } },
-          _count: { _all: true },
-        }),
-        this.githubConnections.findByTeamId(teamId),
-        this.prisma.githubRepo.count({ where: { teamId } }),
-        this.prisma.githubActivityEvent.findMany({
-          where: { teamId },
-          orderBy: { occurredAt: "desc" },
-          take: RECENT_N,
-          select: {
-            id: true,
-            eventType: true,
-            action: true,
-            actorLogin: true,
-            title: true,
-            externalUrl: true,
-            occurredAt: true,
-          },
-        }),
-        this.prisma.message.findMany({
-          where: { channelId: channel.id },
-          orderBy: { createdAt: "desc" },
-          take: RECENT_N,
-          include: {
-            sender: { select: { id: true, email: true, fullName: true } },
-          },
-        }),
-      ]);
+    const [
+      members,
+      taskGroups,
+      connection,
+      repoCount,
+      recentActivity,
+      recentMessages,
+      googleTasksChart,
+    ] = await Promise.all([
+      this.prisma.teamMember.groupBy({
+        by: ["role"],
+        where: { teamId },
+        _count: { _all: true },
+      }),
+      this.prisma.task.groupBy({
+        by: ["status"],
+        where: { project: { teamId } },
+        _count: { _all: true },
+      }),
+      this.githubConnections.findByTeamId(teamId),
+      this.prisma.githubRepo.count({ where: { teamId } }),
+      this.prisma.githubActivityEvent.findMany({
+        where: { teamId },
+        orderBy: { occurredAt: "desc" },
+        take: RECENT_N,
+        select: {
+          id: true,
+          eventType: true,
+          action: true,
+          actorLogin: true,
+          title: true,
+          externalUrl: true,
+          occurredAt: true,
+        },
+      }),
+      this.prisma.message.findMany({
+        where: { channelId: channel.id },
+        orderBy: { createdAt: "desc" },
+        take: RECENT_N,
+        include: {
+          sender: { select: { id: true, email: true, fullName: true } },
+        },
+      }),
+      this.buildGoogleTasksChart(teamId),
+    ]);
 
     const byRole = { lead: 0, member: 0, viewer: 0 };
     let total = 0;
@@ -101,6 +111,7 @@ export class DashboardService {
       teamId,
       members: { total, byRole },
       tasks,
+      googleTasks: googleTasksChart,
       github: {
         connected: Boolean(connection),
         repoCount,
@@ -113,7 +124,38 @@ export class DashboardService {
       cached: false,
     };
 
-    await redis.set(cacheKey(teamId), JSON.stringify({ ...payload, cached: false }), "EX", CACHE_TTL_SEC);
+    await redis.set(
+      cacheKey(teamId),
+      JSON.stringify({ ...payload, cached: false }),
+      "EX",
+      CACHE_TTL_SEC,
+    );
     return payload;
+  }
+
+  private async buildGoogleTasksChart(teamId: string) {
+    const settings = await this.googleTasks.getSettings(teamId);
+    const groups = await this.googleTasks.countByKind(teamId);
+    const counts = { todo: 0, doing: 0, done: 0 };
+    for (const row of groups) {
+      counts[row.listKind] = row._count._all;
+    }
+    const connected = Boolean(
+      settings &&
+        (settings.todoListId ||
+          settings.doingListId ||
+          settings.doneListId ||
+          settings.connectedByUserId),
+    );
+    return {
+      connected,
+      ...counts,
+      lastSyncedAt: settings?.lastSyncedAt?.toISOString() ?? null,
+      lists: {
+        todo: settings?.todoListId ?? null,
+        doing: settings?.doingListId ?? null,
+        done: settings?.doneListId ?? null,
+      },
+    };
   }
 }

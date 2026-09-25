@@ -59,6 +59,14 @@ export function TeamPage() {
   const [commitUser, setCommitUser] = useState<MemberIntegration | null>(null);
   const [commits, setCommits] = useState<GithubCommitPage | null>(null);
   const [commitsLoading, setCommitsLoading] = useState(false);
+  const [tasksOauth, setTasksOauth] = useState(false);
+  const [remoteLists, setRemoteLists] = useState<
+    Array<{ id: string; title: string }>
+  >([]);
+  const [todoListId, setTodoListId] = useState("");
+  const [doingListId, setDoingListId] = useState("");
+  const [doneListId, setDoneListId] = useState("");
+  const [tasksBusy, setTasksBusy] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   async function load() {
@@ -111,6 +119,25 @@ export function TeamPage() {
         });
         setGoogleLinked(m.filter((x) => x.user.googleUserId).length);
       }
+
+      try {
+        const status = await api<{
+          oauthConnected: boolean;
+          settings: {
+            todoListId: string | null;
+            doingListId: string | null;
+            doneListId: string | null;
+          } | null;
+          chart: TasksChartCounts;
+        }>(`/teams/${teamId}/google-tasks`);
+        setTasksOauth(status.oauthConnected);
+        setTodoListId(status.settings?.todoListId ?? "");
+        setDoingListId(status.settings?.doingListId ?? "");
+        setDoneListId(status.settings?.doneListId ?? "");
+        if (status.chart) setChart(status.chart);
+      } catch {
+        setTasksOauth(false);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không tải được");
       setTeam(null);
@@ -162,6 +189,62 @@ export function TeamPage() {
   }, [panel, teamId]);
 
   const canManage = myRole === "lead";
+
+  async function connectGoogleTasks() {
+    if (!teamId || !canManage) return;
+    setTasksBusy(true);
+    try {
+      const { url } = await api<{ url: string }>(
+        `/teams/${teamId}/google-tasks/connect`,
+      );
+      window.location.href = url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không mở được OAuth");
+      setTasksBusy(false);
+    }
+  }
+
+  async function loadRemoteLists() {
+    if (!teamId || !canManage) return;
+    setTasksBusy(true);
+    try {
+      const lists = await api<Array<{ id: string; title: string }>>(
+        `/teams/${teamId}/google-tasks/lists`,
+      );
+      setRemoteLists(lists);
+      setMessage("Đã tải danh sách Google Tasks");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không tải được lists");
+    } finally {
+      setTasksBusy(false);
+    }
+  }
+
+  async function bindAndSync() {
+    if (!teamId || !canManage) return;
+    if (!todoListId && !doingListId && !doneListId) {
+      setError("Chọn ít nhất một task list");
+      return;
+    }
+    setTasksBusy(true);
+    try {
+      await api(`/teams/${teamId}/google-tasks`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          todoListId: todoListId || null,
+          doingListId: doingListId || null,
+          doneListId: doneListId || null,
+        }),
+      });
+      await api(`/teams/${teamId}/google-tasks/sync`, { method: "POST" });
+      setMessage("Đã gắn list và xếp hàng sync");
+      setTimeout(() => void load(), 1500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bind/sync thất bại");
+    } finally {
+      setTasksBusy(false);
+    }
+  }
 
   async function saveTeam(e: FormEvent) {
     e.preventDefault();
@@ -373,7 +456,98 @@ export function TeamPage() {
       {error && <p className="error">{error}</p>}
       {message && <p className="ok">{message}</p>}
 
-      <TasksBarChart counts={chart} />
+      <TasksBarChart
+        counts={chart}
+        actions={
+          canManage ? (
+            <div className="stack narrow">
+              {!tasksOauth ? (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={tasksBusy}
+                  onClick={() => void connectGoogleTasks()}
+                >
+                  Kết nối Google Tasks
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    disabled={tasksBusy}
+                    onClick={() => void loadRemoteLists()}
+                  >
+                    Tải task lists
+                  </button>
+                  {remoteLists.length > 0 && (
+                    <>
+                      <label>
+                        List Todo (hoặc list duy nhất)
+                        <select
+                          value={todoListId}
+                          onChange={(e) => setTodoListId(e.target.value)}
+                        >
+                          <option value="">—</option>
+                          {remoteLists.map((l) => (
+                            <option key={l.id} value={l.id}>
+                              {l.title}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        List Doing (tuỳ chọn)
+                        <select
+                          value={doingListId}
+                          onChange={(e) => setDoingListId(e.target.value)}
+                        >
+                          <option value="">—</option>
+                          {remoteLists.map((l) => (
+                            <option key={`d-${l.id}`} value={l.id}>
+                              {l.title}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        List Done (tuỳ chọn)
+                        <select
+                          value={doneListId}
+                          onChange={(e) => setDoneListId(e.target.value)}
+                        >
+                          <option value="">—</option>
+                          {remoteLists.map((l) => (
+                            <option key={`n-${l.id}`} value={l.id}>
+                              {l.title}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        disabled={tasksBusy}
+                        onClick={() => void bindAndSync()}
+                      >
+                        Lưu & sync
+                      </button>
+                    </>
+                  )}
+                  {tasksOauth && remoteLists.length === 0 && (
+                    <button
+                      type="button"
+                      disabled={tasksBusy}
+                      onClick={() => void bindAndSync()}
+                    >
+                      Sync lại
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          ) : undefined
+        }
+      />
 
       <div className="service-cards">
         <button

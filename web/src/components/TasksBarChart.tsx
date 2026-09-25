@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 export type TasksChartCounts = {
   todo: number;
   doing: number;
@@ -9,9 +11,11 @@ export type TasksChartCounts = {
 export function TasksBarChart({
   counts,
   emptyHint,
+  actions,
 }: {
   counts: TasksChartCounts | null;
   emptyHint?: string;
+  actions?: ReactNode;
 }) {
   const todo = counts?.todo ?? 0;
   const doing = counts?.doing ?? 0;
@@ -35,7 +39,11 @@ export function TasksBarChart({
               Sync lần cuối: {new Date(counts.lastSyncedAt).toLocaleString()}
             </p>
           )}
-          <div className="bar-chart" role="img" aria-label="Biểu đồ Todo Doing Done">
+          <div
+            className="bar-chart"
+            role="img"
+            aria-label="Biểu đồ Todo Doing Done"
+          >
             {(
               [
                 ["Todo", todo, "bar-todo"],
@@ -59,6 +67,7 @@ export function TasksBarChart({
           </div>
         </>
       )}
+      {actions ? <div className="dash-card-actions">{actions}</div> : null}
     </section>
   );
 }

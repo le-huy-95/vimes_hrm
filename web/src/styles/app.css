@@ -600,6 +600,12 @@ button.password-toggle:focus-visible {
   margin-bottom: 0.75rem;
 }
 
+.dash-card-actions {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+}
+
 .inline-input {
   width: 7.5rem;
   padding: 0.35rem 0.45rem;

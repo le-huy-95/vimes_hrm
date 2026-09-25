@@ -45,6 +45,7 @@ import { ChatService } from "./services/chat.service.js";
 import { DashboardService } from "./services/dashboard.service.js";
 import { GchatService } from "./services/gchat.service.js";
 import { IntegrationService } from "./services/integration.service.js";
+import { GoogleTasksService } from "./services/google-tasks.service.js";
 import { AuthController } from "./controllers/auth.controller.js";
 import { OrgController } from "./controllers/org.controller.js";
 import { TeamController } from "./controllers/team.controller.js";
@@ -56,8 +57,10 @@ import { ChatController } from "./controllers/chat.controller.js";
 import { DashboardController } from "./controllers/dashboard.controller.js";
 import { GchatController } from "./controllers/gchat.controller.js";
 import { IntegrationController } from "./controllers/integration.controller.js";
+import { GoogleTasksController } from "./controllers/google-tasks.controller.js";
 import { GithubTeamController } from "./controllers/github-team.controller.js";
 import { GithubWebhookController } from "./controllers/github-webhook.controller.js";
+import { GoogleTasksRepository } from "./repositories/google-tasks.repository.js";
 
 // --- Tầng Repository: chỉ nói chuyện với Prisma ---
 const userRepository = new UserRepository(prisma);
@@ -81,6 +84,7 @@ const taskAttachmentRepository = new TaskAttachmentRepository(prisma);
 const channelRepository = new ChannelRepository(prisma);
 const messageRepository = new MessageRepository(prisma);
 const gchatRepository = new GchatRepository(prisma);
+const googleTasksRepository = new GoogleTasksRepository(prisma);
 
 // --- Tầng Service: nghiệp vụ, không set HTTP status ---
 const sessionService = new SessionService(refreshTokenRepository);
@@ -179,6 +183,7 @@ const dashboardService = new DashboardService(
   teamRepository,
   channelRepository,
   githubConnectionRepository,
+  googleTasksRepository,
 );
 
 const gchatService = new GchatService(gchatRepository, teamRepository);
@@ -190,6 +195,14 @@ const integrationService = new IntegrationService(
   githubActivityRepository,
   workspaceSettingsRepository,
   gchatRepository,
+  googleTasksRepository,
+);
+
+const googleTasksService = new GoogleTasksService(
+  teamRepository,
+  googleTasksRepository,
+  oauthRepository,
+  auditRepository,
 );
 
 // --- Tầng Controller: nhận request, trả response ---
@@ -215,6 +228,9 @@ export const dashboardController = new DashboardController(dashboardService);
 export const gchatController = new GchatController(gchatService);
 export const integrationController = new IntegrationController(
   integrationService,
+);
+export const googleTasksController = new GoogleTasksController(
+  googleTasksService,
 );
 
 /** Object gom toàn bộ dependency — tiện debug / test sau này. */
@@ -242,6 +258,7 @@ export const container = {
     channel: channelRepository,
     message: messageRepository,
     gchat: gchatRepository,
+    googleTasks: googleTasksRepository,
   },
   services: {
     session: sessionService,
@@ -260,6 +277,7 @@ export const container = {
     dashboard: dashboardService,
     gchat: gchatService,
     integration: integrationService,
+    googleTasks: googleTasksService,
   },
   controllers: {
     auth: authController,
@@ -275,5 +293,6 @@ export const container = {
     dashboard: dashboardController,
     gchat: gchatController,
     integration: integrationController,
+    googleTasks: googleTasksController,
   },
 };

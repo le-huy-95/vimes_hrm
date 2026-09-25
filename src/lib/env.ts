@@ -29,6 +29,10 @@ const envSchema = z.object({
   GOOGLE_WORKSPACE_CONNECT_CALLBACK_URL: z
     .string()
     .default("http://localhost:3002/orgs/me/workspace/connect/callback"),
+  GOOGLE_TASKS_CONNECT_CALLBACK_URL: z
+    .string()
+    .default("http://localhost:3002/teams/google-tasks/connect/callback"),
+  GOOGLE_TASKS_SYNC_CRON: z.string().default("*/30 * * * *"),
   GITHUB_APP_ID: z.string().optional().default(""),
   GITHUB_APP_PRIVATE_KEY: z.string().optional().default(""),
   GITHUB_APP_SLUG: z.string().optional().default(""),

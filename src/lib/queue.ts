@@ -5,6 +5,7 @@ export const WORKSPACE_SYNC_QUEUE = "google-workspace-sync";
 export const GITHUB_WEBHOOK_QUEUE = "github-webhook";
 export const GITHUB_SYNC_REPOS_QUEUE = "github-sync-repos";
 export const FILE_THUMBNAIL_QUEUE = "file-thumbnail";
+export const GOOGLE_TASKS_SYNC_QUEUE = "google-tasks-sync";
 
 export function workspaceSyncJobId(orgId: string) {
   return `google-workspace-sync:${orgId}`;
@@ -14,11 +15,16 @@ export function githubSyncReposJobId(installationId: string) {
   return `github-sync-repos:${installationId}`;
 }
 
+export function googleTasksSyncJobId(teamId: string) {
+  return `google-tasks-sync:${teamId}`;
+}
+
 const globalForQueue = globalThis as unknown as {
   workspaceSyncQueue?: Queue;
   githubWebhookQueue?: Queue;
   githubSyncReposQueue?: Queue;
   fileThumbnailQueue?: Queue;
+  googleTasksSyncQueue?: Queue;
 };
 
 function createQueue(name: string) {
@@ -45,11 +51,15 @@ export const githubSyncReposQueue =
 export const fileThumbnailQueue =
   globalForQueue.fileThumbnailQueue ?? createQueue(FILE_THUMBNAIL_QUEUE);
 
+export const googleTasksSyncQueue =
+  globalForQueue.googleTasksSyncQueue ?? createQueue(GOOGLE_TASKS_SYNC_QUEUE);
+
 if (process.env.NODE_ENV !== "production") {
   globalForQueue.workspaceSyncQueue = workspaceSyncQueue;
   globalForQueue.githubWebhookQueue = githubWebhookQueue;
   globalForQueue.githubSyncReposQueue = githubSyncReposQueue;
   globalForQueue.fileThumbnailQueue = fileThumbnailQueue;
+  globalForQueue.googleTasksSyncQueue = googleTasksSyncQueue;
 }
 
 export async function closeWorkspaceSyncQueue(): Promise<void> {
@@ -63,4 +73,8 @@ export async function closeGithubQueues(): Promise<void> {
 
 export async function closeFileQueues(): Promise<void> {
   await fileThumbnailQueue.close();
+}
+
+export async function closeGoogleTasksQueue(): Promise<void> {
+  await googleTasksSyncQueue.close();
 }

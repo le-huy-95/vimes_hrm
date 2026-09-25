@@ -11,6 +11,7 @@ import {
   fileController,
   gchatController,
   githubTeamController,
+  googleTasksController,
   integrationController,
   projectController,
   taskController,
@@ -26,6 +27,10 @@ export const teamsRouter = Router();
 teamsRouter.get(
   "/github/install/callback",
   githubTeamController.installCallback,
+);
+teamsRouter.get(
+  "/google-tasks/connect/callback",
+  googleTasksController.connectCallback,
 );
 
 teamsRouter.use(authenticateJWT);
@@ -53,6 +58,32 @@ teamsRouter.get(
   "/:teamId/members/:userId/github-commits",
   requireTeamPermission("team:view"),
   integrationController.listCommits,
+);
+
+teamsRouter.get(
+  "/:teamId/google-tasks",
+  requireTeamPermission("team:view"),
+  googleTasksController.status,
+);
+teamsRouter.get(
+  "/:teamId/google-tasks/connect",
+  requireTeamPermission("team:manage"),
+  googleTasksController.connectStart,
+);
+teamsRouter.get(
+  "/:teamId/google-tasks/lists",
+  requireTeamPermission("team:manage"),
+  googleTasksController.listRemote,
+);
+teamsRouter.patch(
+  "/:teamId/google-tasks",
+  requireTeamPermission("team:manage"),
+  googleTasksController.bindLists,
+);
+teamsRouter.post(
+  "/:teamId/google-tasks/sync",
+  requireTeamPermission("team:manage"),
+  googleTasksController.sync,
 );
 
 // Google Chat Bot (Phases 8–10)
