@@ -5,6 +5,7 @@ import 'package:manage_teams_app/data/models/team_models.dart';
 import 'package:manage_teams_app/domain/repositories/team_repository.dart';
 import 'package:manage_teams_app/features/auth/bloc/auth_bloc.dart';
 import 'package:manage_teams_app/features/auth/bloc/auth_state.dart';
+import 'package:manage_teams_app/features/integrations/widgets/team_dashboard_section.dart';
 import 'package:manage_teams_app/features/shell/bloc/shell_cubit.dart';
 import 'package:manage_teams_app/features/teams/bloc/team_detail_bloc.dart';
 
@@ -187,13 +188,9 @@ class _ReadyBody extends StatelessWidget {
         const SizedBox(height: 24),
         Text('Bảng điều khiển', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
-        const Card(
-          child: Padding(
-            padding: EdgeInsets.all(16),
-            child: Text(
-              'Google Tasks chart & integrations — Task 7–8',
-            ),
-          ),
+        TeamDashboardSection(
+          teamId: team.id,
+          canManage: state.isLead,
         ),
         const SizedBox(height: 16),
         Text(

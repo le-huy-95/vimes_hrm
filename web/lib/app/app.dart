@@ -7,10 +7,12 @@ import 'package:manage_teams_app/core/network/auth_interceptor.dart';
 import 'package:manage_teams_app/core/network/dio_client.dart';
 import 'package:manage_teams_app/core/storage/token_store.dart';
 import 'package:manage_teams_app/data/repositories/auth_repository_impl.dart';
+import 'package:manage_teams_app/data/repositories/dashboard_repository_impl.dart';
 import 'package:manage_teams_app/data/repositories/integration_repository_impl.dart';
 import 'package:manage_teams_app/data/repositories/org_repository_impl.dart';
 import 'package:manage_teams_app/data/repositories/team_repository_impl.dart';
 import 'package:manage_teams_app/domain/repositories/auth_repository.dart';
+import 'package:manage_teams_app/domain/repositories/dashboard_repository.dart';
 import 'package:manage_teams_app/domain/repositories/integration_repository.dart';
 import 'package:manage_teams_app/domain/repositories/org_repository.dart';
 import 'package:manage_teams_app/domain/repositories/team_repository.dart';
@@ -31,6 +33,7 @@ class _ManageTeamsAppState extends State<ManageTeamsApp> {
   late final TeamRepository _teamRepository;
   late final OrgRepository _orgRepository;
   late final IntegrationRepository _integrationRepository;
+  late final DashboardRepository _dashboardRepository;
   late final AuthBloc _authBloc;
   late final ShellCubit _shellCubit;
   late final AppRouter _appRouter;
@@ -43,6 +46,7 @@ class _ManageTeamsAppState extends State<ManageTeamsApp> {
     _teamRepository = TeamRepositoryImpl();
     _orgRepository = OrgRepositoryImpl();
     _integrationRepository = IntegrationRepositoryImpl();
+    _dashboardRepository = DashboardRepositoryImpl();
     _shellCubit = ShellCubit(
       teamRepository: _teamRepository,
       integrationRepository: _integrationRepository,
@@ -83,6 +87,9 @@ class _ManageTeamsAppState extends State<ManageTeamsApp> {
         RepositoryProvider<OrgRepository>.value(value: _orgRepository),
         RepositoryProvider<IntegrationRepository>.value(
           value: _integrationRepository,
+        ),
+        RepositoryProvider<DashboardRepository>.value(
+          value: _dashboardRepository,
         ),
         RepositoryProvider<TokenStore>.value(value: _tokenStore),
       ],
