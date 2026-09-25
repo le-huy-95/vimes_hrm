@@ -10,6 +10,7 @@ import 'package:manage_teams_app/features/auth/pages/register_page.dart';
 import 'package:manage_teams_app/features/shell/pages/app_shell_page.dart';
 import 'package:manage_teams_app/features/teams/pages/create_team_page.dart';
 import 'package:manage_teams_app/features/teams/pages/home_page.dart';
+import 'package:manage_teams_app/features/teams/pages/team_detail_page.dart';
 
 class GoRouterRefreshStream extends ChangeNotifier {
   GoRouterRefreshStream(Stream<dynamic> stream) {
@@ -76,12 +77,8 @@ class AppRouter {
             ),
             GoRoute(
               path: '/teams/:teamId',
-              builder: (context, state) => Scaffold(
-                body: Center(
-                  child: Text(
-                    'Team ${state.pathParameters['teamId']} — Task 6',
-                  ),
-                ),
+              builder: (context, state) => TeamDetailPage(
+                teamId: state.pathParameters['teamId']!,
               ),
             ),
           ],
