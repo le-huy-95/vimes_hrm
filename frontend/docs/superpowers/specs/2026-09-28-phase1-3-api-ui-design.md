@@ -19,6 +19,8 @@
 | Triển khai | Hướng 1: Shell trước, nối API theo tab |
 | State | **BLoC** (events/states), không Cubit |
 
+> **Rà soát 2026-09-28:** `GET /groups/:id/tasks` trước đây **không** trả `createdAt`. Đã bổ sung `createdAt` trong `listTasks` (core-service) để lịch hoạt động. Model Flutter `TaskListItem` phải parse field này.
+
 ---
 
 ## 2. App Shell & điều hướng
@@ -133,7 +135,7 @@ Optimistic UI: cập nhật cột ngay; nếu API lỗi → rollback card + mess
 
 ### 5.4 API
 
-- `GET/POST /groups/:groupId/tasks`
+- `GET/POST /groups/:groupId/tasks` — list **có `createdAt`** (bắt buộc cho lịch)
 - `GET /groups/:groupId/tasks/:code`
 - `POST …/claim` | `assign` | `complete`
 
@@ -225,12 +227,20 @@ Typed models theo docs §15 (`OrganizationItem`, `GroupSummary`, `TaskListItem`,
 1. **Shell + WorkspaceBloc** + routing 4 tab (empty/skeleton).
 2. **HomeBloc** + API org/group/invite/members + UI Home.
 3. **TasksBloc** + list/create/claim/complete → **Board DnD** → List → Lịch (`createdAt`).
-4. **ChatBloc** + REST list/send/read → Socket → file → reaction/search.
+4. **ChatListBloc + ChatThreadBloc** + REST list/send/read → Socket → file → reaction/search.
 5. **SyncBloc** + status/pull/full + CTA Google.
 6. Push token + polish empty/error/loading đồng bộ theme.
 7. Kiểm thử tay theo checklist docs §17.
 
 Mỗi bước: UI dùng `ColorSkin` + shared widgets; không để lại Home debug dạng `ChoiceChip` hiện tại.
+
+### 9.1 Ghi chú kỹ thuật (sau rà soát)
+
+- **Env socket:** code dùng `SOCKET_DEV_URL` / `SOCKET_PROD_URL` (`EnvConfig.socketUrl`); `.env` phải khớp — không dùng tên `CHAT_SOCKET_*` trừ khi alias trong `EnvConfig`.
+- **Packages sẵn có:** `flutter_bloc`, `table_calendar`, `animated_bottom_navigation_bar`, `socket_io_client`, `file_picker`, `shared_preferences`, `uuid`.
+- **Socket mở rộng:** thêm listen `reaction:changed`, `mention:notify` trên `ChatSocketService`.
+- **Chat TASK filter:** lấy conv `type=GROUP` theo `groupId`; conv `type=TASK` theo `groupId` nếu có, không thì map `taskId` ∈ ids task của group đang chọn.
+- **Pattern BLoC:** copy `AuthBloc` (`Equatable` events/states, `ApiException` → failure message tiếng Việt).
 
 ---
 
