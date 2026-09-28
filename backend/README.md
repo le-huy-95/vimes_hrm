@@ -68,6 +68,28 @@ Or one-shot publish:
 pnpm --filter @manage-teams/hello-producer exec tsx src/send-once.ts
 ```
 
-## Spec
+## Auth email (Phase 1 — Vimes)
 
-See `docs/superpowers/specs/2026-09-28-ke-hoach-trien-khai-v2.5-design.md` Phase 0.
+Services: `messaging-service` (templates), `identity-service` (OTP), `core-service` (org invite).
+
+```bash
+# migrate
+POSTGRES_URL=postgresql://mt:mt@localhost:15432/manage_teams npx pnpm@9.15.0 --filter @manage-teams/db migrate
+
+# terminals
+npx pnpm@9.15.0 --filter @manage-teams/messaging-service dev   # :3206
+npx pnpm@9.15.0 --filter @manage-teams/identity-service dev    # :3202
+npx pnpm@9.15.0 --filter @manage-teams/core-service dev        # :3203
+```
+
+Example register + inspect OTP (no SMTP):
+
+```bash
+curl -s -X POST http://localhost:3202/auth/register \
+  -H 'content-type: application/json' \
+  -d '{"email":"you@example.com","password":"password123","displayName":"You"}'
+
+curl -s http://localhost:3206/internal/email/sent -H 'x-internal-token: dev-internal-token'
+```
+
+See `docs/superpowers/specs/2026-09-28-phase1-auth-email-vimes-design.md`.

@@ -1,0 +1,18 @@
+{{#> layout emailTitle="Đặt lại mật khẩu Vimes"}}
+  <h2 style="margin:0 0 16px;color:#111827;font-size:22px;font-weight:700;">Đặt lại mật khẩu Vimes</h2>
+  <p style="margin:0 0 24px;color:#374151;font-size:15px;line-height:1.6;">
+    Xin chào {{userName}},<br>
+    Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản <strong>{{siteName}}</strong> của bạn.
+    Nếu không phải bạn thực hiện, hãy bỏ qua email này — mật khẩu hiện tại vẫn giữ nguyên.
+  </p>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fff7ed;border-radius:8px;margin-bottom:24px;">
+    <tr>
+      <td align="center" style="padding:24px;">
+        <span style="font-size:32px;font-weight:700;letter-spacing:8px;color:#c2410c;">{{otpCode}}</span>
+      </td>
+    </tr>
+  </table>
+  <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.6;">
+    Mã chỉ dùng để đặt lại mật khẩu và hết hạn sau <strong>{{expiryMinutes}} phút</strong>.
+  </p>
+{{/layout}}
