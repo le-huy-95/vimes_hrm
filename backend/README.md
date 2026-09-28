@@ -80,8 +80,10 @@ POSTGRES_URL=postgresql://mt:mt@localhost:15432/manage_teams npx pnpm@9.15.0 --f
 npx pnpm@9.15.0 --filter @manage-teams/messaging-service dev   # :3206
 npx pnpm@9.15.0 --filter @manage-teams/identity-service dev    # :3202
 npx pnpm@9.15.0 --filter @manage-teams/core-service dev        # :3203
+npx pnpm@9.15.0 --filter @manage-teams/api-gateway dev         # :3200 (Flutter gọi cổng này)
 ```
 
+Client chỉ gọi **api-gateway** `:3200` (`/auth/*`, `/organizations/*`, `/invitations/*`). Không expose messaging internal.
 Example register + inspect OTP (no SMTP):
 
 ```bash
