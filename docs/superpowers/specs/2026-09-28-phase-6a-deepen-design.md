@@ -10,7 +10,7 @@
 |-------|--------|
 | Scope | **6a only** (not 6b/6c/6d/6e) |
 | Approach | Deepen chuẩn nghiệm thu (tool registry + link resolver + mock/LLM + SSE + rate/budget) |
-| LLM | **Mock-first**: no `ANTHROPIC_API_KEY` → MockPlanner; with key → Anthropic tool-use; API fail → one MockPlanner fallback |
+| LLM | **Mock-first** + pluggable `LLMProvider`: `AI_PROVIDER=auto\|mock\|anthropic\|openai`. Auto: Anthropic key → anthropic; else OpenAI/Codex key → openai; else mock. Provider API fail → one MockPlanner fallback |
 | Data access | **Prisma direct** in `ai-service` (HTTP-to-core deferred) |
 | Due dates | Schema has **no task due field** → acceptance uses **open/active tasks**, not “overdue this week” |
 | Reports | No report entity → `get_report_link` returns unavailable; never invent URLs |
@@ -24,7 +24,8 @@
 - 6d admin ops deepen, 6e bot/digest deepen
 - HTTP tool clients to core/chat
 - Adding `dueAt` (separate schema change if needed later)
-- Prompt caching / full Anthropic token streaming polish beyond basic SSE events
+- Prompt caching / full token streaming polish beyond basic SSE events
+- Non-OpenAI-compatible proprietary Codex SDKs (only OpenAI Chat Completions / Responses + tools style)
 
 ## Architecture
 
@@ -33,7 +34,10 @@ Client → api-gateway (/ai/*) → ai-service
   → rate limit (per-min + daily token budget)
   → ai_sessions (create/reuse)
   → orchestrator (max AI_MAX_TOOL_ROUNDS=8, timeout AI_CHAT_TIMEOUT_MS)
-       ├─ MockPlanner | AnthropicProvider
+       ├─ LLMProvider (interface)
+       │    ├─ MockPlanner
+       │    ├─ AnthropicProvider   (ANTHROPIC_API_KEY)
+       │    └─ OpenAiProvider      (OPENAI_API_KEY / Codex-compatible base URL)
        ├─ tools/* (Prisma, read-only)
        └─ link-resolver (existence + membership)
   → SSE or JSON response
@@ -86,7 +90,26 @@ Unresolved → omit from response.
 
 **MockPlanner:** Vietnamese/English heuristics (open tasks → `list_my_tasks` / `workload_summary`; group/members → `get_group` / `list_members`; sync/google → `sync_status`; explicit task id/code → `get_task`).
 
-**AnthropicProvider:** tool-use schemas matching registry; fixed system prompt (read-only, no fabricated links, only tool results). Model id via env (e.g. `AI_ANTHROPIC_MODEL`). On provider error: one MockPlanner fallback; response still usable with `mock: true`.
+**LLMProvider interface:** `planAndRun({ system, messages, tools, maxRounds }) → { answer, toolTrace, usage, provider }`. Orchestrator never branches on vendor beyond factory selection.
+
+**AnthropicProvider:** Claude tool-use; schemas matching registry; fixed system prompt (read-only, no fabricated links). Env: `ANTHROPIC_API_KEY`, `AI_ANTHROPIC_MODEL` (default a current Sonnet id, overridable).
+
+**OpenAiProvider (Codex / OpenAI-compatible):** Chat Completions (or Responses) with `tools` / function calling mapped to the same registry. Env:
+- `OPENAI_API_KEY` — API key (OpenAI or Codex-compatible issuer)
+- `OPENAI_BASE_URL` — optional; default `https://api.openai.com/v1`; set to Codex/compatible gateway if needed
+- `AI_OPENAI_MODEL` — model id string for that endpoint
+
+**Provider selection (`AI_PROVIDER`):**
+| Value | Behavior |
+|-------|----------|
+| `auto` (default) | `ANTHROPIC_API_KEY` set → anthropic; else `OPENAI_API_KEY` set → openai; else mock |
+| `mock` | Always MockPlanner |
+| `anthropic` | Require Anthropic key; else fail closed to mock + log, or 503 if `AI_REQUIRE_LLM=true` |
+| `openai` | Require OpenAI key; same fallback rules |
+
+On live provider error: **one** MockPlanner fallback; response `mock: true` (unless `AI_REQUIRE_LLM=true` → surface error).
+
+Response / audit include `provider: "mock" | "anthropic" | "openai"`.
 
 ## API
 
@@ -103,6 +126,7 @@ Response:
   "links": [{ "type": "task", "id": "uuid", "href": "https://...", "label": "..." }],
   "toolsUsed": ["list_my_tasks"],
   "mock": true,
+  "provider": "mock",
   "usage": { "promptTokens": 0, "completionTokens": 0 }
 }
 ```
@@ -121,8 +145,15 @@ Gateway: existing `/ai/*` proxy; additive fields only.
 | `AI_CHAT_TIMEOUT_MS` | 30000 | Request timeout |
 | `AI_RATE_LIMIT_PER_MIN` | 10 | 429 |
 | `AI_TOKEN_BUDGET_PER_DAY` | 200000 | 429 `AI_BUDGET` (mock counts 0 tokens) |
+| `AI_PROVIDER` | `auto` | See provider selection |
+| `AI_REQUIRE_LLM` | `false` | If true, no silent mock fallback on missing key / provider error |
+| `OPENAI_API_KEY` | — | OpenAI / Codex-compatible |
+| `OPENAI_BASE_URL` | OpenAI v1 | Override for Codex gateway |
+| `AI_OPENAI_MODEL` | required when openai | Model id for that base URL |
+| `ANTHROPIC_API_KEY` | — | Anthropic |
+| `AI_ANTHROPIC_MODEL` | overridable default | Claude model id |
 
-Errors: 400 validation; 404 session not owned; 429 rate/budget; timeout → dedicated AI timeout error; Anthropic fail → fallback then success with `mock: true` when fallback works.
+Errors: 400 validation; 404 session not owned; 429 rate/budget; timeout → AI timeout error; live provider fail → MockPlanner fallback with `mock: true` (or hard error if `AI_REQUIRE_LLM=true`).
 
 Middleware lives in `ai-service` (pattern similar to chat rate-limit).
 
@@ -140,10 +171,24 @@ Middleware lives in `ai-service` (pattern similar to chat rate-limit).
 
 ## Files (expected)
 
-- `backend/apps/ai-service/src/modules/ai/`: `tools/`, `link-resolver.ts`, `orchestrator.ts`, `providers/mock.ts`, `providers/anthropic.ts`, `rate-limit.ts`; refactor `ai.service.ts` / controller
-- `backend/apps/ai-service/README.md`
+- `backend/apps/ai-service/src/modules/ai/`: `tools/`, `link-resolver.ts`, `orchestrator.ts`, `providers/types.ts`, `providers/mock.ts`, `providers/anthropic.ts`, `providers/openai.ts`, `providers/factory.ts`, `rate-limit.ts`; refactor `ai.service.ts` / controller
+- `backend/apps/ai-service/README.md` — document Anthropic vs OpenAI/Codex env
 - `backend/docs/runbooks/phase-6a-deepen.md`
 - No required DB migration for this deepen
+
+## Codex / OpenAI key usage (operator)
+
+```bash
+# backend/.env — example for OpenAI-compatible / Codex gateway
+AI_PROVIDER=openai          # or leave auto if only OPENAI_API_KEY is set
+OPENAI_API_KEY=sk-...
+OPENAI_BASE_URL=https://api.openai.com/v1   # or your Codex-compatible base
+AI_OPENAI_MODEL=gpt-4.1                     # must match what the gateway accepts
+```
+
+Dropping a Codex key into `ANTHROPIC_API_KEY` will **not** work. Use `OPENAI_API_KEY` (+ optional `OPENAI_BASE_URL`).
+
+CI still runs without any LLM keys (mock path).
 
 ## Follow-ups (explicitly later)
 
@@ -152,3 +197,4 @@ Middleware lives in `ai-service` (pattern similar to chat rate-limit).
 - HTTP tools with user JWT + `via=ai`
 - Session message transcript / multi-turn context
 - 6b / 6c / 6d / 6e deepen
+- Vendor-specific Codex SDK if OpenAI-compatible HTTP is insufficient
