@@ -249,7 +249,7 @@ export function createPrismaAccessCheck(userId: string): AccessCheck {
     }
     if (c.type === "conversation") {
       const m = await prismaRead.conversationMember.findFirst({
-        where: { conversationId: c.id, userId },
+        where: { conversationId: c.id, userId, status: "ACTIVE" },
         select: { userId: true },
       });
       return Boolean(m);
