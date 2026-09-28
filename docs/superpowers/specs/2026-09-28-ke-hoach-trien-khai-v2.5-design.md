@@ -56,7 +56,7 @@ Google sync, Sheets, AI, file đầy đủ (multipart 2GB + ClamAV) **không ch�
 | 3 | `core-service` | Group, task, đa assignee, transfer, audit, outbox; **invalidate cache** membership/task khi ghi |
 | 4 | `chat-service` | Hội thoại, tin nhắn, file, WebSocket (Socket.IO + Redis), media worker; **invalidate/cập nhật** last-N + file metadata cache |
 | 5 | `google-sync-service` | Planner, `sync_jobs`, Tasks/Sheets, poller, delta sync, limiter, webhook Drive |
-| 6 | `messaging-service` | Chat app HTTP (bot), **email (OTP/reset/digest)**, thông báo; sau này bridge Events API |
+| 6 | `messaging-service` | Phase 1: **email stub** (OTP/reset); sau đó Chat app HTTP (bot), digest, thông báo; Phase 3+ bridge Events API |
 | 7 | `ai-service` | Orchestrator LLM, tools, link resolver, retrieval, guardrails, audit, chi phí |
 
 ### 2.2 Sơ đồ luồng (đã chỉnh client)
@@ -72,7 +72,9 @@ Google Chat ──HTTP──► messaging ──REST──► core / ai
 Drive push ──► webhook google-sync
 ```
 
-**WebSocket:** chỉ **WSS** (TLS); JWT bắt buộc trước khi join room/subscribe; làm mới token qua socket như v2.4; không đi qua api-gateway nhưng cùng issuer JWT với REST. CORS/origin allowlist theo env.
+**WebSocket:** JWT bắt buộc trước khi join room/subscribe; làm mới token qua socket như v2.4; không đi qua api-gateway nhưng cùng issuer JWT với REST; CORS/origin allowlist theo env.  
+- **Production / staging:** chỉ **WSS** (TLS).  
+- **Local / dev:** cho phép `ws://` (không TLS) trên localhost.
 
 ### 2.3 Kafka, tech stack, monorepo
 Giữ quy ước v2.4: một topic / aggregate; `aggregateVersion`; idempotent `processed_events`; Transactional Outbox; envelope `eventId`, `correlationId`, `actor.via` (`user` | `ai-assistant` | `google` | `system`).
@@ -85,6 +87,7 @@ Stack: Node.js LTS, Express, TypeScript, Socket.IO + Redis adapter, Postgres, Re
 - Chỉ `google-sync-service` được đưa signal vào đường này (network policy + service token nội bộ).
 - Core áp dụng trong transaction theo bảng merge field-level; ghi `task_events` với `actor.via = google`.
 - Từ chối hoặc merge có kiểm soát khi version/etag lệch — không ghi đè im lặng trái quy tắc.
+- Mọi ghi task thành công — dù actor là `user`, `ai-assistant`, hay `google` — đều **DELETE** cache membership/task list/detail liên quan (cùng đường invalidate của `core-service`).
 
 ### 2.5 Ai sở hữu cache (chốt)
 | Key prefix / dữ liệu | Ghi DB | Xóa hoặc cập nhật cache |
@@ -93,9 +96,14 @@ Stack: Node.js LTS, Express, TypeScript, Socket.IO + Redis adapter, Postgres, Re
 | `cache:conv:*` last-N | `chat-service` | **chat-service** cập nhật last-N hoặc DELETE key khi ghi/sửa/xoá tin |
 | `cache:file:*` metadata | `chat-service` | **chat-service** (media worker) invalidate khi trạng thái file đổi |
 | `rt:*` | chat-service | Không dùng làm cache nghiệp vụ; không flush khi reconnect |
-| Ops flush `cache:*` | — | Chỉ admin nền tảng / runbook (messaging hoặc tool ops), audit |
+| Ops flush `cache:*` | — | Chỉ admin nền tảng / runbook (tool ops hoặc endpoint nội bộ có bảo vệ), audit — **không** gắn bắt buộc vào messaging |
 
 Package dùng chung (`packages/common` hoặc `cache-keys`) định nghĩa tên key — tránh mỗi service tự đặt lệch.
+
+**Redis key namespaces:**
+- `cache:*` — cache đọc do app đặt; **bắt buộc TTL**; bị `volatile-lru` evict được.
+- `rt:*` — presence / typing / pub-sub **do app đặt** (không TTL kiểu cache, hoặc TTL dài + refresh).
+- Key của **Socket.IO Redis adapter** theo convention của thư viện (thường không có prefix `rt:`): không gán TTL kiểu `cache:*`; không flush khi reconnect; monitor riêng. Policy `volatile-lru` không evict key không có expire — adapter keys không set expire thì an toàn trên cùng instance.
 
 ---
 
@@ -106,9 +114,12 @@ Package dùng chung (`packages/common` hoặc `cache-keys`) định nghĩa tên 
 2. **Email/password + OTP** — đăng ký, verify, forgot/reset; hash **Argon2id** (hoặc tương đương); OTP TTL ngắn.
 
 ### 3.2 Kênh OTP / reset
-- OTP và link/reset gửi **email** qua `messaging-service` (SMTP/provider).  
-- **SMS không** nằm Phase 1 (có thể mở sau).  
+- OTP và link/reset gửi **email** (SMTP/provider). **SMS không** nằm Phase 1 (có thể mở sau).
 - UI có thể vẫn có field “SĐT” từ auth-ui-port nhưng Phase 1 chỉ nghiệm thu **email** làm định danh OTP trừ khi có quyết định mới.
+- **Phase 1 — tránh phụ thuộc messaging đầy đủ (Phase 3):**
+  1. Dựng **`messaging-service` stub tối thiểu** trong Phase 1: chỉ API nội bộ `sendEmail` (OTP, reset, có thể digest sau) + SMTP config; identity gọi qua service token / network nội bộ.
+  2. Không chờ bot Google Chat / digest đầy đủ của Phase 3 mới gửi OTP.
+  3. Phase 3 mở rộng cùng service (Chat HTTP, digest, bridge…) — không đổi chỗ gọi từ identity.
 
 ### 3.3 Liên kết tài khoản & Google sync
 - Một user có thể có cả `google_sub` và credential email.
@@ -154,7 +165,7 @@ Load test nhẹ (k6/smoke) từ Phase 1.5; đầy đủ + Google mock ở Phase 
 
 | Sự kiện | Hành vi |
 |---------|---------|
-| Ghi task/group/member | `core-service` DELETE key liên quan (idempotent) |
+| Ghi task/group/member (mọi `actor.via`) | `core-service` DELETE key liên quan (idempotent) |
 | Tin nhắn mới/sửa/xoá | `chat-service` cập nhật last-N hoặc DELETE |
 | File READY / đổi metadata | `chat-service` invalidate metadata; không giữ URL ký lâu |
 | User bị xoá khỏi nhóm | Invalidate membership **ngay** |
@@ -241,7 +252,7 @@ Storage: local MinIO; production mặc định tạm **Cloudflare R2** (S3-compa
 | Phase | Nội dung | Thời gian | Phụ thuộc | Ghi chú v2.5 |
 |-------|----------|-----------|-----------|--------------|
 | 0 | Monorepo, hạ tầng, khung service | ~1 tuần | – | + Redis key convention, `volatile-lru` |
-| 1 | identity + core + Flutter tối thiểu | 3 tuần | 0 | Dual auth, OpenAPI, cache membership/task, link Google để sync |
+| 1 | identity + core + Flutter tối thiểu | 3 tuần | 0 | Dual auth, OpenAPI, cache membership/task, **messaging email stub (OTP)**, link Google (để sync Phase 2) |
 | 1.5 | chat-service realtime (text) | 2 tuần | 1 (một phần) | + last-N cache, chat rate limit; Alpha DoD |
 | 1.6 | File đầy đủ | 2 tuần | 1.5 | + metadata cache/CDN |
 | 1.7 | Reaction, mention, tìm kiếm, push | 1 tuần | 1.5 | FCM/APNs (Flutter) |
@@ -316,7 +327,7 @@ Thêm: Argon2id; OTP/reset một lần dùng qua email; liên kết account có 
 
 ### 10.2 Đã chốt trong v2.5
 - Flutter là client chính; auth-ui-port = UI trước Phase 1 API.
-- Auth: Google + email/OTP (email); SMS sau.
+- Auth: Google + email/OTP (email qua messaging stub Phase 1); SMS sau.
 - Email-only phải link Google mới sync.
 - File: trần/quota mặc định; có thể `null`.
 - AI: tầm nhìn có 6b; ship hiện tại chỉ 6a.
@@ -363,5 +374,13 @@ Thêm: Argon2id; OTP/reset một lần dùng qua email; liên kết account có 
 - Check-in file v2.4 vào `docs/superpowers/specs/`.
 - Làm rõ auth-ui-port vs Phase 1.
 - Chốt Redis eviction; cache owner; invalidate-only.
-- OTP = email qua messaging; sync cần Google link.
+- OTP = email; sync cần Google link.
 - WSS + JWT; Alpha không bắt buộc file; liệt kê [CHƯA XÁC MINH]; bảng phase + vai trò; push Flutter.
+
+## 14. Changelog vá lần 2 (cùng ngày)
+- Phase 1: **messaging email stub** cho OTP/reset (không chờ Phase 3).
+- WS: production = WSS; local/dev cho phép `ws://`.
+- Ghi chú key Socket.IO adapter vs `rt:` / `cache:`.
+- `google.signals` / mọi actor ghi task đều invalidate cache.
+- Ops flush không bắt buộc qua messaging.
+- Đảm bảo `auth-ui-port-design.md` có trong repo (link § đầu trang).
