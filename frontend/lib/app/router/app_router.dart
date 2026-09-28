@@ -10,12 +10,24 @@ import 'package:manage_teams/features/auth/pages/login_page.dart';
 import 'package:manage_teams/features/auth/pages/register_page.dart';
 import 'package:manage_teams/features/auth/pages/reset_password_page.dart';
 import 'package:manage_teams/features/auth/pages/verify_otp_page.dart';
+import 'package:manage_teams/features/chat/bloc/chat_list_bloc.dart';
+import 'package:manage_teams/features/chat/bloc/chat_list_event.dart';
+import 'package:manage_teams/features/chat/bloc/chat_thread_bloc.dart';
 import 'package:manage_teams/features/chat/pages/chat_tab_page.dart';
-import 'package:manage_teams/features/home/pages/home_tab_page.dart';
+import 'package:manage_teams/features/home/bloc/home_bloc.dart';
+import 'package:manage_teams/features/home/bloc/home_event.dart';
+import 'package:manage_teams/features/home/data/chat_repository.dart';
+import 'package:manage_teams/features/home/data/chat_socket_service.dart';
 import 'package:manage_teams/features/home/data/core_repository.dart';
+import 'package:manage_teams/features/home/data/sync_repository.dart';
+import 'package:manage_teams/features/home/pages/home_tab_page.dart';
 import 'package:manage_teams/features/shell/pages/app_shell.dart';
 import 'package:manage_teams/features/splash/pages/splash_page.dart';
+import 'package:manage_teams/features/sync/bloc/sync_bloc.dart';
+import 'package:manage_teams/features/sync/bloc/sync_event.dart';
 import 'package:manage_teams/features/sync/pages/sync_tab_page.dart';
+import 'package:manage_teams/features/tasks/bloc/tasks_bloc.dart';
+import 'package:manage_teams/features/tasks/bloc/tasks_event.dart';
 import 'package:manage_teams/features/tasks/pages/tasks_tab_page.dart';
 import 'package:manage_teams/features/workspace/bloc/workspace_bloc.dart';
 import 'package:manage_teams/features/workspace/bloc/workspace_event.dart';
@@ -142,9 +154,42 @@ GoRouter createAppRouter(AuthBloc authBloc) {
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
-          return BlocProvider(
-            create: (ctx) => WorkspaceBloc(ctx.read<CoreRepository>())
-              ..add(const WorkspaceStarted()),
+          return MultiBlocProvider(
+            providers: [
+              BlocProvider(
+                create: (ctx) => WorkspaceBloc(ctx.read<CoreRepository>())
+                  ..add(const WorkspaceStarted()),
+              ),
+              BlocProvider(
+                create: (ctx) => HomeBloc(
+                  ctx.read<CoreRepository>(),
+                  ctx.read<WorkspaceBloc>(),
+                )..add(const HomeStarted()),
+              ),
+              BlocProvider(
+                create: (ctx) => TasksBloc(
+                  ctx.read<CoreRepository>(),
+                  ctx.read<WorkspaceBloc>(),
+                )..add(const TasksStarted()),
+              ),
+              BlocProvider(
+                create: (ctx) => ChatListBloc(
+                  ctx.read<ChatRepository>(),
+                  ctx.read<CoreRepository>(),
+                  ctx.read<WorkspaceBloc>(),
+                )..add(const ChatListStarted()),
+              ),
+              BlocProvider(
+                create: (ctx) => ChatThreadBloc(
+                  ctx.read<ChatRepository>(),
+                  ctx.read<ChatSocketService>(),
+                ),
+              ),
+              BlocProvider(
+                create: (ctx) => SyncBloc(ctx.read<SyncRepository>())
+                  ..add(const SyncStarted()),
+              ),
+            ],
             child: AppShell(navigationShell: navigationShell),
           );
         },
