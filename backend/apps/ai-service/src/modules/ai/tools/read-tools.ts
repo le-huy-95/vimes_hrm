@@ -90,17 +90,21 @@ export async function getTask(
   const groupIds = await activeGroupIds(ctx.userId);
   if (groupIds.length === 0) return { data: null, linkCandidates: [] };
 
+  const where: {
+    deletedAt: null;
+    groupId: string | { in: string[] };
+    id?: string;
+    code?: string;
+  } = {
+    deletedAt: null,
+    groupId: { in: groupIds },
+  };
+  if (args.taskId) where.id = args.taskId;
+  if (args.code) where.code = args.code;
+  if (args.groupId && groupIds.includes(args.groupId)) where.groupId = args.groupId;
+
   const task = await prismaRead.task.findFirst({
-    where: {
-      deletedAt: null,
-      groupId: { in: groupIds },
-      ...(args.taskId ? { id: args.taskId } : {}),
-      ...(args.code && args.groupId
-        ? { code: args.code, groupId: args.groupId }
-        : args.code
-          ? { code: args.code }
-          : {}),
-    },
+    where,
     select: {
       id: true,
       groupId: true,
@@ -179,12 +183,15 @@ export async function listMembers(ctx: ToolContext, args: { groupId: string }): 
 
 export async function workloadSummary(ctx: ToolContext): Promise<ToolResult> {
   const listed = await listMyTasks(ctx, { openOnly: false });
-  const tasks = Array.isArray(listed.data) ? listed.data : [];
+  const tasks = (
+    Array.isArray(listed.data) ? listed.data : []
+  ) as Array<{ id: string; status: string; code: string; title: string; groupId: string }>;
   const byStatus: Record<string, number> = {};
-  for (const t of tasks as Array<{ status: string }>) {
+  for (const t of tasks) {
     byStatus[t.status] = (byStatus[t.status] ?? 0) + 1;
   }
-  const open = (tasks as Array<{ status: string }>).filter((t) => OPEN.includes(t.status));
+  const open = tasks.filter((t) => OPEN.includes(t.status));
+  const openIds = new Set(open.map((t) => t.id));
   return {
     data: {
       total: tasks.length,
@@ -192,9 +199,7 @@ export async function workloadSummary(ctx: ToolContext): Promise<ToolResult> {
       byStatus,
       samples: open.slice(0, 5),
     },
-    linkCandidates: listed.linkCandidates.filter((c) =>
-      open.some((t) => (t as { id: string }).id === c.id),
-    ),
+    linkCandidates: listed.linkCandidates.filter((c) => openIds.has(c.id)),
   };
 }
 
