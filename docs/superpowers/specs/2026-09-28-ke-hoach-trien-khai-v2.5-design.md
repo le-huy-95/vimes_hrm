@@ -121,11 +121,28 @@ Package dùng chung (`packages/common` hoặc `cache-keys`) định nghĩa tên 
   2. Không chờ bot Google Chat / digest đầy đủ của Phase 3 mới gửi OTP.
   3. Phase 3 mở rộng cùng service (Chat HTTP, digest, bridge…) — không đổi chỗ gọi từ identity.
 
-### 3.3 Liên kết tài khoản & Google sync
-- Một user có thể có cả `google_sub` và credential email.
-- Google đăng nhập trùng email đã có **không** merge ngầm: bắt buộc bước xác nhận liên kết; audit link/unlink.
-- JWT/refresh thống nhất cho mọi phương thức đăng nhập.
-- **Tài khoản email-only:** dùng đủ core + chat. Bật Google Tasks/Sheets/Chat sync **chỉ sau khi** đã liên kết Google (OAuth) và có refresh token hợp lệ; UI ẩn hoặc disable sync + copy giải thích nếu chưa liên kết.
+### 3.3 Tổ chức, nhiều nhóm, liên kết Google (chốt hướng B)
+
+**Mô hình thành viên**
+- Có lớp **Tổ chức (`organizations`)** dùng chung: một org chứa **nhiều nhóm (`groups.organization_id`)**.
+- User app thuộc **một hoặc nhiều nhóm** (qua `group_members`); không giới hạn “chỉ 1 nhóm”.
+- Trong một nhóm, mọi thành viên đều *được phép* liên kết Google **cá nhân** của mình để sync — không dùng một Google login chung cho cả nhóm.
+- Phân quyền nhóm giữ OWNER/ADMIN/MEMBER như v2.4; quyền tạo nhóm trong org: OWNER/ADMIN org (chi tiết role org trong Phase 1 plan — tối thiểu có `org_members.role`).
+
+**Google — giai đoạn đầu (Phase 1 / Alpha)**
+- Mỗi user app liên kết **tối đa một** Google (`google_sub` + refresh mã hoá) làm **primary**.
+- Có thể có cả email/password và Google (luật liên kết trùng email: xác nhận, không merge ngầm).
+- Email-only: dùng core + chat; bật sync Tasks/Sheets/Chat chỉ khi đã có Google primary hợp lệ.
+
+**Google — hướng B mở sau Alpha (không chặn Phase 1)**
+- Cho phép **nhiều** tài khoản Google trên cùng một user app (`user_google_accounts`: `google_sub`, token, `account_type`, `is_primary`, `linked_at`).
+- UI: thêm/xoá link; chọn **primary** mặc định cho sync.
+- Tuỳ chọn sau (không bắt buộc ngay khi mở multi-Google): gắn “Google ưu tiên theo nhóm” (`group_id` → `google_account_id`) chỉ cho sync của **chính user đó** trong nhóm đó — vẫn không phải Google dùng chung cả nhóm.
+- Schema Phase 1 nên để bảng `user_google_accounts` (1 hàng primary) để khỏi migrate lớn khi bật multi.
+
+**Không làm**
+- Domain-wide delegation.
+- Một OAuth Google dùng chung token cho mọi member trong group (hướng C).
 
 ### 3.4 Bảo vệ
 - Rate limit riêng `/auth/*` (login, OTP, reset) trên gateway; khóa tạm sau N lần sai.
@@ -252,7 +269,7 @@ Storage: local MinIO; production mặc định tạm **Cloudflare R2** (S3-compa
 | Phase | Nội dung | Thời gian | Phụ thuộc | Ghi chú v2.5 |
 |-------|----------|-----------|-----------|--------------|
 | 0 | Monorepo, hạ tầng, khung service | ~1 tuần | – | + Redis key convention, `volatile-lru` |
-| 1 | identity + core + Flutter tối thiểu | 3 tuần | 0 | Dual auth, OpenAPI, cache membership/task, **messaging email stub (OTP)**, link Google (để sync Phase 2) |
+| 1 | identity + core + Flutter tối thiểu | 3 tuần | 0 | Dual auth, OpenAPI, **org + multi-group**, cache, messaging email stub, Google primary (1); schema sẵn multi-Google |
 | 1.5 | chat-service realtime (text) | 2 tuần | 1 (một phần) | + last-N cache, chat rate limit; Alpha DoD |
 | 1.6 | File đầy đủ | 2 tuần | 1.5 | + metadata cache/CDN |
 | 1.7 | Reaction, mention, tìm kiếm, push | 1 tuần | 1.5 | FCM/APNs (Flutter) |
@@ -327,8 +344,10 @@ Thêm: Argon2id; OTP/reset một lần dùng qua email; liên kết account có 
 
 ### 10.2 Đã chốt trong v2.5
 - Flutter là client chính; auth-ui-port = UI trước Phase 1 API.
+- **Org → nhiều Group; user thuộc nhiều nhóm; Google cá nhân (không shared-group Google).**
 - Auth: Google + email/OTP (email qua messaging stub Phase 1); SMS sau.
-- Email-only phải link Google mới sync.
+- Phase 1/Alpha: **một Google primary / user**; schema `user_google_accounts` sẵn. **Multi-Google / user (hướng B) mở sau Alpha.**
+- Email-only phải có Google primary mới sync.
 - File: trần/quota mặc định; có thể `null`.
 - AI: tầm nhìn có 6b; ship hiện tại chỉ 6a.
 - Internal Alpha = 1 + 1.5 (text); file đầy đủ = 1.6.
@@ -348,13 +367,14 @@ Thêm: Argon2id; OTP/reset một lần dùng qua email; liên kết account có 
 | 5 | Thời điểm 6c | Sau Alpha + 6a ổn |
 | 6 | Số rate limit chính xác | Gợi ý §3.4 / §5.4; fine-tune trong plan |
 | 7 | Tách Redis 2 instance | Chỉ khi monitor yêu cầu |
+| 8 | Bật multi-Google / user (+ optional Google-theo-nhóm cho sync cá nhân) | Sau Alpha; không chặn Phase 1–1.5 |
 
 ---
 
 ## 11. Bước tiếp theo
 1. User review spec này; chỉnh nếu cần.
-2. Viết implementation plan (writing-plans) từ spec đã duyệt.
-3. Phase 0 → Phase 1 (+ cache/auth) → 1.5 → Internal Alpha; sync/AI song song theo lịch đội.
+2. Viết / thực thi implementation plan theo roadmap Phase 0 → 1 → 1.5 (Alpha).
+3. Sync/AI/file đầy đủ song song theo lịch đội; multi-Google sau Alpha.
 
 ---
 
@@ -384,3 +404,8 @@ Thêm: Argon2id; OTP/reset một lần dùng qua email; liên kết account có 
 - `google.signals` / mọi actor ghi task đều invalidate cache.
 - Ops flush không bắt buộc qua messaging.
 - Đảm bảo `auth-ui-port-design.md` có trong repo (link § đầu trang).
+
+## 15. Changelog — tổ chức & Google hướng B
+- Thêm **Organization** chứa nhiều Group; user multi-group.
+- Google: Alpha = 1 primary; sau Alpha = nhiều Google / user (hướng B); không shared Google cả nhóm.
+- Schema `user_google_accounts` từ Phase 1.
