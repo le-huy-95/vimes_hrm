@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:equatable/equatable.dart';
 
 sealed class ChatThreadEvent extends Equatable {
@@ -18,10 +20,39 @@ class ChatThreadClosed extends ChatThreadEvent {
 }
 
 class ChatThreadSendRequested extends ChatThreadEvent {
-  const ChatThreadSendRequested(this.body);
+  const ChatThreadSendRequested(this.body, {this.fileIds});
   final String body;
+  final List<String>? fileIds;
   @override
-  List<Object?> get props => [body];
+  List<Object?> get props => [body, fileIds];
+}
+
+class ChatThreadAttachRequested extends ChatThreadEvent {
+  const ChatThreadAttachRequested({
+    required this.bytes,
+    required this.fileName,
+    this.contentType,
+    this.caption = '',
+  });
+
+  final Uint8List bytes;
+  final String fileName;
+  final String? contentType;
+  final String caption;
+
+  @override
+  List<Object?> get props => [fileName, bytes.length, contentType, caption];
+}
+
+class ChatThreadReactionToggled extends ChatThreadEvent {
+  const ChatThreadReactionToggled({
+    required this.messageId,
+    required this.emoji,
+  });
+  final String messageId;
+  final String emoji;
+  @override
+  List<Object?> get props => [messageId, emoji];
 }
 
 class ChatThreadSocketMessage extends ChatThreadEvent {

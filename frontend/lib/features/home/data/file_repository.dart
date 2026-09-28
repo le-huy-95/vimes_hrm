@@ -47,7 +47,7 @@ class FileRepository {
       final dio = Dio();
       await dio.put<void>(
         putUrl,
-        data: Stream.fromIterable([bytes]),
+        data: bytes,
         options: Options(
           headers: {
             Headers.contentLengthHeader: bytes.length,

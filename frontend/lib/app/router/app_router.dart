@@ -19,6 +19,7 @@ import 'package:manage_teams/features/home/bloc/home_event.dart';
 import 'package:manage_teams/features/home/data/chat_repository.dart';
 import 'package:manage_teams/features/home/data/chat_socket_service.dart';
 import 'package:manage_teams/features/home/data/core_repository.dart';
+import 'package:manage_teams/features/home/data/file_repository.dart';
 import 'package:manage_teams/features/home/data/sync_repository.dart';
 import 'package:manage_teams/features/home/pages/home_tab_page.dart';
 import 'package:manage_teams/features/shell/pages/app_shell.dart';
@@ -180,10 +181,16 @@ GoRouter createAppRouter(AuthBloc authBloc) {
                 )..add(const ChatListStarted()),
               ),
               BlocProvider(
-                create: (ctx) => ChatThreadBloc(
-                  ctx.read<ChatRepository>(),
-                  ctx.read<ChatSocketService>(),
-                ),
+                create: (ctx) {
+                  final auth = authBloc.state;
+                  final userId = auth is AuthAuthenticated ? auth.user.id : null;
+                  return ChatThreadBloc(
+                    ctx.read<ChatRepository>(),
+                    ctx.read<ChatSocketService>(),
+                    ctx.read<FileRepository>(),
+                    currentUserId: userId,
+                  );
+                },
               ),
               BlocProvider(
                 create: (ctx) => SyncBloc(ctx.read<SyncRepository>())
