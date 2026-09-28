@@ -55,6 +55,17 @@ class ChatThreadReactionToggled extends ChatThreadEvent {
   List<Object?> get props => [messageId, emoji];
 }
 
+class ChatThreadSearchRequested extends ChatThreadEvent {
+  const ChatThreadSearchRequested(this.query);
+  final String query;
+  @override
+  List<Object?> get props => [query];
+}
+
+class ChatThreadClearSearch extends ChatThreadEvent {
+  const ChatThreadClearSearch();
+}
+
 class ChatThreadSocketMessage extends ChatThreadEvent {
   const ChatThreadSocketMessage(this.raw);
   final Map<String, dynamic> raw;

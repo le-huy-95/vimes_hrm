@@ -22,6 +22,8 @@ class ChatThreadBloc extends Bloc<ChatThreadEvent, ChatThreadState> {
     on<ChatThreadSendRequested>(_onSend);
     on<ChatThreadAttachRequested>(_onAttach);
     on<ChatThreadReactionToggled>(_onReaction);
+    on<ChatThreadSearchRequested>(_onSearch);
+    on<ChatThreadClearSearch>(_onClearSearch);
     on<ChatThreadSocketMessage>(_onSocket);
   }
 
@@ -174,6 +176,45 @@ class ChatThreadBloc extends Bloc<ChatThreadEvent, ChatThreadState> {
       emit(ChatThreadFailure(_msg(e), previous: prev));
       emit(prev);
     }
+  }
+
+  Future<void> _onSearch(
+    ChatThreadSearchRequested event,
+    Emitter<ChatThreadState> emit,
+  ) async {
+    final prev = _ready;
+    if (prev == null) return;
+    final q = event.query.trim();
+    if (q.length < 2) {
+      emit(prev.copyWith(clearSearch: true));
+      return;
+    }
+    emit(prev.copyWith(searchQuery: q, searching: true));
+    try {
+      final results = await _chat.searchMessages(
+        prev.conversationId,
+        q: q,
+      );
+      emit(
+        prev.copyWith(
+          searchQuery: q,
+          searchResults: results,
+          searching: false,
+        ),
+      );
+    } catch (e) {
+      emit(ChatThreadFailure(_msg(e), previous: prev));
+      emit(prev.copyWith(searchQuery: q, searching: false));
+    }
+  }
+
+  Future<void> _onClearSearch(
+    ChatThreadClearSearch event,
+    Emitter<ChatThreadState> emit,
+  ) async {
+    final prev = _ready;
+    if (prev == null) return;
+    emit(prev.copyWith(clearSearch: true));
   }
 
   Future<void> _onSocket(

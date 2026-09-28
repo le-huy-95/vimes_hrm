@@ -160,10 +160,13 @@ class _ThreadPane extends StatefulWidget {
 
 class _ThreadPaneState extends State<_ThreadPane> {
   final _body = TextEditingController();
+  final _search = TextEditingController();
+  bool _searchOpen = false;
 
   @override
   void dispose() {
     _body.dispose();
+    _search.dispose();
     super.dispose();
   }
 
@@ -194,15 +197,102 @@ class _ThreadPaneState extends State<_ThreadPane> {
 
         return Column(
           children: [
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.all(12),
-                itemCount: ready.messages.length,
-                itemBuilder: (context, i) {
-                  return _MessageBubble(message: ready.messages[i]);
-                },
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+              child: Row(
+                children: [
+                  if (_searchOpen)
+                    Expanded(
+                      child: TextField(
+                        controller: _search,
+                        autofocus: true,
+                        decoration: InputDecoration(
+                          hintText: 'Tìm tin (≥ 2 ký tự)…',
+                          isDense: true,
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _search.clear();
+                              context
+                                  .read<ChatThreadBloc>()
+                                  .add(const ChatThreadClearSearch());
+                              setState(() => _searchOpen = false);
+                            },
+                          ),
+                        ),
+                        onChanged: (v) {
+                          context
+                              .read<ChatThreadBloc>()
+                              .add(ChatThreadSearchRequested(v));
+                        },
+                      ),
+                    )
+                  else
+                    const Spacer(),
+                  IconButton(
+                    tooltip: 'Tìm tin',
+                    icon: Icon(
+                      _searchOpen ? Icons.search_off : Icons.search,
+                      color: ColorSkin.primary,
+                    ),
+                    onPressed: () {
+                      if (_searchOpen) {
+                        _search.clear();
+                        context
+                            .read<ChatThreadBloc>()
+                            .add(const ChatThreadClearSearch());
+                      }
+                      setState(() => _searchOpen = !_searchOpen);
+                    },
+                  ),
+                ],
               ),
             ),
+            if (ready.searching)
+              const LinearProgressIndicator(minHeight: 2),
+            if (ready.isSearching) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${ready.searchResults.length} kết quả cho “${ready.searchQuery}”',
+                    style: const TextStyle(
+                      color: ColorSkin.subtitle,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: ready.searchResults.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'Không tìm thấy tin phù hợp',
+                          style: TextStyle(color: ColorSkin.subtitle),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: ready.searchResults.length,
+                        itemBuilder: (context, i) {
+                          return _MessageBubble(
+                            message: ready.searchResults[i],
+                          );
+                        },
+                      ),
+              ),
+            ] else
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: ready.messages.length,
+                  itemBuilder: (context, i) {
+                    return _MessageBubble(message: ready.messages[i]);
+                  },
+                ),
+              ),
             if (ready.busy)
               const LinearProgressIndicator(minHeight: 2),
             Padding(
