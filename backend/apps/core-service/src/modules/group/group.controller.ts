@@ -64,3 +64,13 @@ export async function removeMember(req: Request, res: Response): Promise<void> {
     sendError(res, err, logger);
   }
 }
+
+export async function leaveGroup(req: Request, res: Response): Promise<void> {
+  try {
+    const user = await requireUser(req);
+    const groupId = req.params.groupId as string;
+    res.json(await groupService.leaveGroup(groupId, user.id));
+  } catch (err) {
+    sendError(res, err, logger);
+  }
+}

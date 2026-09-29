@@ -63,7 +63,7 @@ export async function getGroup(groupId: string, userId: string) {
       },
     },
   });
-  if (!group) throw new AppError("Not found", "NOT_FOUND", 404);
+  if (!group) throw new AppError("Không tìm thấy", "NOT_FOUND", 404);
   return {
     id: group.id,
     organizationId: group.organizationId,
@@ -86,7 +86,7 @@ export async function addGroupMember(
 ) {
   await requireGroupAdmin(groupId, actorId);
   const group = await prismaRead.group.findUnique({ where: { id: groupId } });
-  if (!group) throw new AppError("Not found", "NOT_FOUND", 404);
+  if (!group) throw new AppError("Không tìm thấy", "NOT_FOUND", 404);
   await requireOrgMember(group.organizationId, targetUserId);
 
   const member = await prismaWrite.$transaction(async (tx) => {
@@ -125,7 +125,7 @@ export async function removeGroupMember(groupId: string, actorId: string, target
       where: { groupId_userId: { groupId, userId: targetUserId } },
     });
     if (!existing || existing.status !== "ACTIVE") {
-      throw new AppError("Not found", "NOT_FOUND", 404);
+      throw new AppError("Không tìm thấy", "NOT_FOUND", 404);
     }
     await tx.groupMember.update({
       where: { groupId_userId: { groupId, userId: targetUserId } },
@@ -153,4 +153,87 @@ export async function removeGroupMember(groupId: string, actorId: string, target
   });
 
   void notifyChat("/internal/conversations/remove-member", { groupId, userId: targetUserId });
+}
+
+export async function leaveGroup(groupId: string, userId: string) {
+  const me = await prismaRead.groupMember.findUnique({
+    where: { groupId_userId: { groupId, userId } },
+  });
+  if (!me || me.status !== "ACTIVE") {
+    throw new AppError("Không thuộc nhóm", "FORBIDDEN", 403);
+  }
+
+  if (me.role === "OWNER") {
+    const owners = await prismaRead.groupMember.count({
+      where: { groupId, status: "ACTIVE", role: "OWNER" },
+    });
+    if (owners <= 1) {
+      throw new AppError(
+        "Owner duy nhất không thể rời nhóm — chuyển quyền owner trước",
+        "SOLE_OWNER",
+        400,
+      );
+    }
+  }
+
+  await prismaWrite.$transaction(async (tx) => {
+    await tx.groupMember.update({
+      where: { groupId_userId: { groupId, userId } },
+      data: { status: "REMOVED" },
+    });
+    await tx.taskAssignee.updateMany({
+      where: {
+        userId,
+        status: "ACTIVE",
+        task: { groupId, deletedAt: null },
+      },
+      data: { status: "REMOVED" },
+    });
+    const ev = envelope({
+      eventType: "GroupMemberLeft",
+      aggregateType: "group",
+      aggregateId: groupId,
+      aggregateVersion: 1,
+      actor: { userId, via: "user" },
+      payload: { userId },
+    });
+    await tx.outbox.create({
+      data: { topic: TOPICS.groupEvents, payload: ev as unknown as Prisma.InputJsonValue },
+    });
+  });
+
+  void notifyChat("/internal/conversations/remove-member", { groupId, userId });
+
+  const chatResults = await leaveLinkedSpacesViaSync(userId, groupId);
+  return { leftGroup: true as const, chatResults };
+}
+
+async function leaveLinkedSpacesViaSync(userId: string, groupId: string) {
+  const syncUrl = (process.env.GOOGLE_SYNC_URL ?? "http://localhost:3207").replace(/\/$/, "");
+  const token = process.env.INTERNAL_SERVICE_TOKEN ?? "dev-internal-token";
+  try {
+    const res = await fetch(`${syncUrl}/internal/google-chat/leave-linked`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-internal-token": token,
+      },
+      body: JSON.stringify({ userId, groupId }),
+    });
+    if (!res.ok) {
+      return [{ spaceName: "*", ok: false, error: await res.text() }];
+    }
+    const body = (await res.json()) as {
+      chatResults?: Array<{ spaceName: string; ok: boolean; error?: string }>;
+    };
+    return body.chatResults ?? [];
+  } catch (err) {
+    return [
+      {
+        spaceName: "*",
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      },
+    ];
+  }
 }
