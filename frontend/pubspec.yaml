@@ -1,0 +1,110 @@
+name: manage_teams
+description: "Manage Teams Flutter client (config & design base from VIMES)."
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  dio: ^5.9.0
+  go_router: ^17.1.0
+  flutter_svg: ^2.2.0
+  intl: ^0.20.2
+  animated_bottom_navigation_bar: ^1.4.0
+  flutter_secure_storage: ^9.2.4
+  flutter_dotenv: ^6.0.0
+  json_annotation: ^4.9.0
+  freezed_annotation: ^3.1.0
+  logger: ^2.6.1
+  flutter_bloc: ^9.1.1
+  equatable: ^2.0.7
+  google_sign_in: ^7.1.1
+  google_sign_in_web: ^1.1.0
+  google_identity_services_web: ^0.3.3
+  web: ^1.1.0
+  firebase_core: ^4.0.0
+  firebase_messaging: ^16.0.0
+  flutter_local_notifications: ^21.0.0
+  permission_handler: ^12.0.1
+  shimmer: ^3.0.0
+  device_info_plus: ^12.3.0
+  flutter_spinkit: ^5.2.2
+  bot_toast: ^4.1.3
+  clipboard: ^3.0.14
+  webview_flutter: ^4.13.0
+  pinput: ^6.0.2
+  sms_autofill: ^2.3.0
+  lottie: ^3.3.2
+  flutter_html: ^3.0.0
+  file_picker: ^10.3.7
+  image_picker: ^1.2.1
+  path_provider: ^2.1.5
+  infinite_scroll_pagination: ^5.1.1
+  url_launcher: ^6.3.1
+  share_plus: ^12.0.1
+  package_info_plus: ^9.0.0
+  qr_flutter: ^4.1.0
+  screenshot: ^3.0.0
+  image_gallery_saver_plus: ^4.0.1
+  shared_preferences: ^2.5.4
+  uuid: ^4.5.1
+  fl_chart: ^1.2.0
+  local_auth: ^3.0.0
+  google_maps_flutter: ^2.18.0
+  geolocator: ^14.0.2
+  app_links: ^7.0.0
+  mobile_scanner: ^7.2.0
+  firebase_auth: ^6.5.7
+  table_calendar: ^3.2.1
+  geocoding: ^5.0.0
+  mime: ^2.0.0
+  http_parser: ^4.1.0
+  pdf: ^3.12.0
+  flutter_pdfview: ^1.4.5
+  cached_network_image: ^3.4.1
+  socket_io_client: ^3.1.6
+  http: ^1.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ">=2.4.14 <2.12.0"
+  json_serializable: ^6.8.0
+  freezed: ^3.2.3
+  bloc_test: ^10.0.0
+  mocktail: ^1.0.4
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "lib/assets/image/app_icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "lib/assets/image/app_icon_foreground.png"
+  remove_alpha_ios: true
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
+    - lib/assets/svg/
+    - lib/assets/json/
+    - lib/assets/image/
+    - lib/assets/fonts/
+  fonts:
+    - family: BeVietnamPro
+      fonts:
+        - asset: lib/assets/fonts/BeVietnamPro-Regular.ttf
+          weight: 400
+        - asset: lib/assets/fonts/BeVietnamPro-Bold.ttf
+          weight: 700
