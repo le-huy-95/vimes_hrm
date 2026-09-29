@@ -32,3 +32,10 @@ class ChatListSelectRequested extends ChatListEvent {
 class ChatListClearSelection extends ChatListEvent {
   const ChatListClearSelection();
 }
+
+class ChatListOpenByIdRequested extends ChatListEvent {
+  const ChatListOpenByIdRequested(this.conversationId);
+  final String conversationId;
+  @override
+  List<Object?> get props => [conversationId];
+}

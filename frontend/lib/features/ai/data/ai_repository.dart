@@ -23,7 +23,7 @@ class AiRepository {
         '/ai/chat',
         data: {
           'message': message,
-          if (sessionId != null) 'sessionId': sessionId,
+          'sessionId': ?sessionId,
         },
         options: Options(
           receiveTimeout: const Duration(seconds: 60),
@@ -50,7 +50,7 @@ class AiRepository {
     });
     req.body = jsonEncode({
       'message': message,
-      if (sessionId != null) 'sessionId': sessionId,
+      'sessionId': ?sessionId,
     });
 
     final res = await _http.send(req).timeout(const Duration(seconds: 60));

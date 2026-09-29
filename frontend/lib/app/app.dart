@@ -7,6 +7,9 @@ import 'package:manage_teams/app/app_theme.dart';
 import 'package:manage_teams/app/router/app_router.dart';
 import 'package:manage_teams/core/network/api_client.dart';
 import 'package:manage_teams/core/push/push_token_service.dart';
+import 'package:manage_teams/features/ai/bloc/ai_bloc.dart';
+import 'package:manage_teams/features/ai/bloc/ai_event.dart';
+import 'package:manage_teams/features/ai/data/ai_repository.dart';
 import 'package:manage_teams/features/auth/bloc/auth_bloc.dart';
 import 'package:manage_teams/features/auth/bloc/auth_event.dart';
 import 'package:manage_teams/features/auth/bloc/auth_state.dart';
@@ -31,12 +34,15 @@ class _ManageTeamsAppState extends State<ManageTeamsApp> {
   late final AuthRepository _authRepo = AuthRepository(_api);
   late final DeviceRepository _devices = DeviceRepository(_api);
   late final PushTokenService _push = PushTokenService(_devices);
+  late final AiRepository _aiRepo = AiRepository(_api);
   late final AuthBloc _authBloc = AuthBloc(_authRepo)
     ..add(const AuthBootstrapRequested());
+  late final AiBloc _aiBloc = AiBloc(_aiRepo)..add(const AiStarted());
   late final GoRouter _router = createAppRouter(_authBloc);
 
   @override
   void dispose() {
+    _aiBloc.close();
     _authBloc.close();
     super.dispose();
   }
@@ -49,6 +55,7 @@ class _ManageTeamsAppState extends State<ManageTeamsApp> {
         RepositoryProvider.value(value: _authRepo),
         RepositoryProvider.value(value: _devices),
         RepositoryProvider.value(value: _push),
+        RepositoryProvider.value(value: _aiRepo),
         RepositoryProvider(create: (_) => CoreRepository(_api)),
         RepositoryProvider(create: (_) => ChatRepository(_api)),
         RepositoryProvider(create: (_) => FileRepository(_api)),
@@ -57,8 +64,11 @@ class _ManageTeamsAppState extends State<ManageTeamsApp> {
           create: (_) => ChatSocketService(_api.tokenStore),
         ),
       ],
-      child: BlocProvider.value(
-        value: _authBloc,
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider.value(value: _authBloc),
+          BlocProvider.value(value: _aiBloc),
+        ],
         child: BlocListener<AuthBloc, AuthState>(
           listenWhen: (prev, next) =>
               next is AuthAuthenticated ||
@@ -69,6 +79,7 @@ class _ManageTeamsAppState extends State<ManageTeamsApp> {
               _push.registerAfterLogin();
             } else if (state is AuthUnauthenticated || state is AuthFailure) {
               _push.unregisterOnLogout();
+              _aiBloc.add(const AiNewChatRequested());
             }
           },
           child: MaterialApp.router(

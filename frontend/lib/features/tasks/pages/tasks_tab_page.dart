@@ -7,7 +7,7 @@ import 'package:manage_teams/features/tasks/bloc/tasks_event.dart';
 import 'package:manage_teams/features/tasks/bloc/tasks_state.dart';
 import 'package:manage_teams/shared/snackbar/simple_snackbar_service.dart';
 import 'package:manage_teams/shared/widgets/app_button.dart';
-import 'package:manage_teams/shared/widgets/app_text_field.dart';
+import 'package:manage_teams/shared/widgets/app_prompt_dialog.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 class TasksTabPage extends StatelessWidget {
@@ -21,6 +21,15 @@ class TasksTabPage extends StatelessWidget {
           SimpleSnackbarService.showError(state.message);
         } else if (state is TasksActionSuccess) {
           SimpleSnackbarService.showSuccess(state.message);
+        } else if (state is TasksReady && state.focusTaskId != null) {
+          Future<void>.delayed(const Duration(seconds: 2), () {
+            if (!context.mounted) return;
+            final current = context.read<TasksBloc>().state;
+            if (current is TasksReady &&
+                current.focusTaskId == state.focusTaskId) {
+              context.read<TasksBloc>().add(const TasksFocusCleared());
+            }
+          });
         }
       },
       builder: (context, state) {
@@ -41,8 +50,10 @@ class TasksTabPage extends StatelessWidget {
                   const Expanded(
                     child: Text(
                       'Công việc',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   AppButton(
@@ -62,23 +73,23 @@ class TasksTabPage extends StatelessWidget {
                   _chip(
                     'Board',
                     ready?.view == TasksViewMode.board,
-                    () => context
-                        .read<TasksBloc>()
-                        .add(const TasksViewChanged(TasksViewMode.board)),
+                    () => context.read<TasksBloc>().add(
+                      const TasksViewChanged(TasksViewMode.board),
+                    ),
                   ),
                   _chip(
                     'List',
                     ready?.view == TasksViewMode.list,
-                    () => context
-                        .read<TasksBloc>()
-                        .add(const TasksViewChanged(TasksViewMode.list)),
+                    () => context.read<TasksBloc>().add(
+                      const TasksViewChanged(TasksViewMode.list),
+                    ),
                   ),
                   _chip(
                     'Lịch',
                     ready?.view == TasksViewMode.calendar,
-                    () => context
-                        .read<TasksBloc>()
-                        .add(const TasksViewChanged(TasksViewMode.calendar)),
+                    () => context.read<TasksBloc>().add(
+                      const TasksViewChanged(TasksViewMode.calendar),
+                    ),
                   ),
                 ],
               ),
@@ -91,38 +102,36 @@ class TasksTabPage extends StatelessWidget {
               Expanded(
                 child: switch (ready.view) {
                   TasksViewMode.board => _BoardView(
-                      tasks: ready.tasks,
-                      onDrop: (task, to) => context.read<TasksBloc>().add(
-                            TasksDragRequested(task: task, toStatus: to),
-                          ),
+                    tasks: ready.tasks,
+                    focusTaskId: ready.focusTaskId,
+                    onDrop: (task, to) => context.read<TasksBloc>().add(
+                      TasksDragRequested(task: task, toStatus: to),
                     ),
+                  ),
                   TasksViewMode.list => _ListView(
-                      tasks: ready.filtered,
-                      filter: ready.filter,
-                      onFilter: (f) => context
-                          .read<TasksBloc>()
-                          .add(TasksFilterChanged(f)),
-                      onClaim: (t) => context.read<TasksBloc>().add(
-                            TasksDragRequested(
-                              task: t,
-                              toStatus: 'IN_PROGRESS',
-                            ),
-                          ),
-                      onComplete: (t) => context.read<TasksBloc>().add(
-                            TasksDragRequested(task: t, toStatus: 'DONE'),
-                          ),
+                    tasks: ready.filtered,
+                    filter: ready.filter,
+                    focusTaskId: ready.focusTaskId,
+                    onFilter: (f) =>
+                        context.read<TasksBloc>().add(TasksFilterChanged(f)),
+                    onClaim: (t) => context.read<TasksBloc>().add(
+                      TasksDragRequested(task: t, toStatus: 'IN_PROGRESS'),
                     ),
+                    onComplete: (t) => context.read<TasksBloc>().add(
+                      TasksDragRequested(task: t, toStatus: 'DONE'),
+                    ),
+                  ),
                   TasksViewMode.calendar => _CalendarView(
-                      tasks: ready.tasks,
-                      focusedDay: ready.focusedDay,
-                      mode: ready.calendarMode,
-                      onFocused: (d) => context
-                          .read<TasksBloc>()
-                          .add(TasksFocusedDayChanged(d)),
-                      onMode: (m) => context
-                          .read<TasksBloc>()
-                          .add(TasksCalendarModeChanged(m)),
+                    tasks: ready.tasks,
+                    focusedDay: ready.focusedDay,
+                    mode: ready.calendarMode,
+                    onFocused: (d) => context.read<TasksBloc>().add(
+                      TasksFocusedDayChanged(d),
                     ),
+                    onMode: (m) => context.read<TasksBloc>().add(
+                      TasksCalendarModeChanged(m),
+                    ),
+                  ),
                 },
               ),
           ],
@@ -145,39 +154,27 @@ class TasksTabPage extends StatelessWidget {
   }
 
   Future<void> _create(BuildContext context) async {
-    final controller = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Tạo task'),
-        content: AppTextField(
-          label: 'Tiêu đề',
-          controller: controller,
-          required: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Hủy'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Tạo'),
-          ),
-        ],
-      ),
+    final title = await showAppPromptDialog(
+      context,
+      title: 'Tạo task',
+      hint: 'Tiêu đề task',
+      label: 'Tiêu đề',
+      confirmLabel: 'Tạo',
     );
-    if (ok != true || controller.text.trim().isEmpty || !context.mounted) {
-      return;
-    }
-    context.read<TasksBloc>().add(TasksCreateRequested(controller.text));
+    if (title == null || title.trim().isEmpty || !context.mounted) return;
+    context.read<TasksBloc>().add(TasksCreateRequested(title));
   }
 }
 
 class _BoardView extends StatelessWidget {
-  const _BoardView({required this.tasks, required this.onDrop});
+  const _BoardView({
+    required this.tasks,
+    required this.onDrop,
+    this.focusTaskId,
+  });
   final List<TaskListItem> tasks;
   final void Function(TaskListItem, String) onDrop;
+  final String? focusTaskId;
 
   @override
   Widget build(BuildContext context) {
@@ -186,10 +183,11 @@ class _BoardView extends StatelessWidget {
       builder: (context, c) {
         final scroll = c.maxWidth < 720;
         Widget column(String status) => _Column(
-              status: status,
-              tasks: tasks.where((t) => t.status == status).toList(),
-              onDrop: onDrop,
-            );
+          status: status,
+          tasks: tasks.where((t) => t.status == status).toList(),
+          onDrop: onDrop,
+          focusTaskId: focusTaskId,
+        );
         if (scroll) {
           return SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -226,10 +224,12 @@ class _Column extends StatelessWidget {
     required this.status,
     required this.tasks,
     required this.onDrop,
+    this.focusTaskId,
   });
   final String status;
   final List<TaskListItem> tasks;
   final void Function(TaskListItem, String) onDrop;
+  final String? focusTaskId;
 
   Color get _bg {
     return switch (status) {
@@ -273,14 +273,23 @@ class _Column extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10),
                           child: SizedBox(
                             width: 220,
-                            child: _TaskCard(task: t),
+                            child: _TaskCard(
+                              task: t,
+                              highlighted: t.id == focusTaskId,
+                            ),
                           ),
                         ),
                         childWhenDragging: Opacity(
                           opacity: 0.4,
-                          child: _TaskCard(task: t),
+                          child: _TaskCard(
+                            task: t,
+                            highlighted: t.id == focusTaskId,
+                          ),
                         ),
-                        child: _TaskCard(task: t),
+                        child: _TaskCard(
+                          task: t,
+                          highlighted: t.id == focusTaskId,
+                        ),
                       ),
                   ],
                 ),
@@ -294,13 +303,20 @@ class _Column extends StatelessWidget {
 }
 
 class _TaskCard extends StatelessWidget {
-  const _TaskCard({required this.task});
+  const _TaskCard({required this.task, this.highlighted = false});
   final TaskListItem task;
+  final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: highlighted
+            ? const BorderSide(color: ColorSkin.primary, width: 2)
+            : BorderSide.none,
+      ),
       child: Padding(
         padding: const EdgeInsets.all(10),
         child: Column(
@@ -314,7 +330,10 @@ class _TaskCard extends StatelessWidget {
                 fontSize: 11,
               ),
             ),
-            Text(task.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+              task.title,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
           ],
         ),
       ),
@@ -329,12 +348,14 @@ class _ListView extends StatelessWidget {
     required this.onFilter,
     required this.onClaim,
     required this.onComplete,
+    this.focusTaskId,
   });
   final List<TaskListItem> tasks;
   final String? filter;
   final ValueChanged<String?> onFilter;
   final ValueChanged<TaskListItem> onClaim;
   final ValueChanged<TaskListItem> onComplete;
+  final String? focusTaskId;
 
   @override
   Widget build(BuildContext context) {
@@ -365,20 +386,56 @@ class _ListView extends StatelessWidget {
             itemCount: tasks.length,
             itemBuilder: (context, i) {
               final t = tasks[i];
+              final focused = t.id == focusTaskId;
               return ListTile(
+                selected: focused,
+                selectedTileColor: ColorSkin.tealLight,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: focused
+                      ? const BorderSide(color: ColorSkin.primary, width: 2)
+                      : BorderSide.none,
+                ),
                 title: Text('${t.code} — ${t.title}'),
                 subtitle: Text(t.status),
-                trailing: t.status == 'TODO'
-                    ? TextButton(
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: 'Assign userId',
+                      icon: const Icon(Icons.person_add_alt),
+                      onPressed: () async {
+                        final userId = await showAppPromptDialog(
+                          context,
+                          title: 'Assign',
+                          hint: 'userId UUID',
+                          label: 'User ID',
+                        );
+                        if (userId == null ||
+                            userId.trim().isEmpty ||
+                            !context.mounted) {
+                          return;
+                        }
+                        context.read<TasksBloc>().add(
+                          TasksAssignRequested(
+                            code: t.code,
+                            userId: userId.trim(),
+                          ),
+                        );
+                      },
+                    ),
+                    if (t.status == 'TODO')
+                      TextButton(
                         onPressed: () => onClaim(t),
                         child: const Text('Claim'),
                       )
-                    : t.status == 'IN_PROGRESS'
-                        ? TextButton(
-                            onPressed: () => onComplete(t),
-                            child: const Text('Hoàn thành'),
-                          )
-                        : null,
+                    else if (t.status == 'IN_PROGRESS')
+                      TextButton(
+                        onPressed: () => onComplete(t),
+                        child: const Text('Hoàn thành'),
+                      ),
+                  ],
+                ),
               );
             },
           ),
@@ -461,9 +518,7 @@ class _CalendarView extends StatelessWidget {
               for (final t in _forDay(focusedDay))
                 ListTile(
                   title: Text('${t.code} — ${t.title}'),
-                  subtitle: Text(
-                    'Tạo: ${t.createdAt.toLocal()} · ${t.status}',
-                  ),
+                  subtitle: Text('Tạo: ${t.createdAt.toLocal()} · ${t.status}'),
                 ),
             ],
           ),

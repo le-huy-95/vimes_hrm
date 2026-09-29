@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:manage_teams/core/models/api_models.dart';
 import 'package:manage_teams/core/network/api_client.dart';
 import 'package:manage_teams/features/chat/bloc/chat_list_event.dart';
 import 'package:manage_teams/features/chat/bloc/chat_list_state.dart';
@@ -17,6 +18,7 @@ class ChatListBloc extends Bloc<ChatListEvent, ChatListState> {
     on<ChatListRefreshRequested>(_onRefresh);
     on<ChatListSelectRequested>(_onSelect);
     on<ChatListClearSelection>(_onClear);
+    on<ChatListOpenByIdRequested>(_onOpenById);
 
     _wsSub = _workspace.stream.listen((ws) {
       if (ws is WorkspaceReady) {
@@ -62,7 +64,7 @@ class ChatListBloc extends Bloc<ChatListEvent, ChatListState> {
           .where((c) => c.type == 'GROUP' && c.groupId == event.groupId)
           .toList();
       final taskConvs = all.where((c) {
-        if (c.type != 'TASK') return false;
+        if (c.type != 'TASK' && c.type != 'TASK_THREAD') return false;
         if (c.groupId == event.groupId) return true;
         return c.taskId != null && taskIds.contains(c.taskId);
       }).toList();
@@ -98,6 +100,30 @@ class ChatListBloc extends Bloc<ChatListEvent, ChatListState> {
     final prev = _ready;
     if (prev == null) return;
     emit(prev.copyWith(clearSelected: true));
+  }
+
+  Future<void> _onOpenById(
+    ChatListOpenByIdRequested event,
+    Emitter<ChatListState> emit,
+  ) async {
+    final prev = _ready;
+    if (prev == null) {
+      emit(const ChatListFailure('Chưa tải danh sách chat'));
+      return;
+    }
+    ConversationItem? found;
+    for (final c in [...prev.groupConversations, ...prev.taskConversations]) {
+      if (c.id == event.conversationId) {
+        found = c;
+        break;
+      }
+    }
+    if (found == null) {
+      emit(const ChatListFailure('Không tìm thấy hội thoại'));
+      emit(prev);
+      return;
+    }
+    emit(prev.copyWith(selected: found));
   }
 
   String _msg(Object e) => e is ApiException ? e.message : e.toString();

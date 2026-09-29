@@ -20,6 +20,9 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     on<TasksFocusedDayChanged>(_onFocusedDay);
     on<TasksCreateRequested>(_onCreate);
     on<TasksDragRequested>(_onDrag);
+    on<TasksAssignRequested>(_onAssign);
+    on<TasksFocusRequested>(_onFocus);
+    on<TasksFocusCleared>(_onFocusCleared);
 
     _wsSub = _workspace.stream.listen((ws) {
       if (ws is WorkspaceReady) {
@@ -181,6 +184,57 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
       emit(TasksFailure(_msg(e), previous: prev));
       emit(prev.copyWith(busy: false));
     }
+  }
+
+  Future<void> _onAssign(
+    TasksAssignRequested event,
+    Emitter<TasksState> emit,
+  ) async {
+    final prev = _ready;
+    if (_groupId == null || prev == null) return;
+    emit(prev.copyWith(busy: true));
+    try {
+      await _core.assignTask(_groupId!, event.code, event.userId.trim());
+      final tasks = await _core.listTasks(_groupId!);
+      final next = prev.copyWith(tasks: tasks, busy: false);
+      emit(TasksActionSuccess('Đã assign', ready: next));
+      emit(next);
+    } catch (e) {
+      emit(TasksFailure(_msg(e), previous: prev));
+      emit(prev.copyWith(busy: false));
+    }
+  }
+
+  Future<void> _onFocus(
+    TasksFocusRequested event,
+    Emitter<TasksState> emit,
+  ) async {
+    final prev = _ready;
+    if (prev == null) return;
+    TaskListItem? match;
+    for (final t in prev.tasks) {
+      if (t.id == event.taskId) {
+        match = t;
+        break;
+      }
+    }
+    emit(
+      prev.copyWith(
+        view: TasksViewMode.list,
+        filter: match?.status,
+        clearFilter: match == null,
+        focusTaskId: event.taskId,
+      ),
+    );
+  }
+
+  Future<void> _onFocusCleared(
+    TasksFocusCleared event,
+    Emitter<TasksState> emit,
+  ) async {
+    final prev = _ready;
+    if (prev == null) return;
+    emit(prev.copyWith(clearFocus: true));
   }
 
   String _msg(Object e) => e is ApiException ? e.message : e.toString();

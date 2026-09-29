@@ -24,6 +24,7 @@ class TasksReady extends TasksState {
     this.calendarMode = TasksCalendarMode.week,
     DateTime? focusedDay,
     this.busy = false,
+    this.focusTaskId,
   }) : focusedDay = focusedDay ?? DateTime.now();
 
   final List<TaskListItem> tasks;
@@ -32,6 +33,7 @@ class TasksReady extends TasksState {
   final TasksCalendarMode calendarMode;
   final DateTime focusedDay;
   final bool busy;
+  final String? focusTaskId;
 
   List<TaskListItem> get filtered {
     if (filter == null) return tasks;
@@ -46,6 +48,8 @@ class TasksReady extends TasksState {
     TasksCalendarMode? calendarMode,
     DateTime? focusedDay,
     bool? busy,
+    String? focusTaskId,
+    bool clearFocus = false,
   }) {
     return TasksReady(
       tasks: tasks ?? this.tasks,
@@ -54,12 +58,13 @@ class TasksReady extends TasksState {
       calendarMode: calendarMode ?? this.calendarMode,
       focusedDay: focusedDay ?? this.focusedDay,
       busy: busy ?? this.busy,
+      focusTaskId: clearFocus ? null : (focusTaskId ?? this.focusTaskId),
     );
   }
 
   @override
   List<Object?> get props =>
-      [tasks, view, filter, calendarMode, focusedDay, busy];
+      [tasks, view, filter, calendarMode, focusedDay, busy, focusTaskId];
 }
 
 class TasksFailure extends TasksState {

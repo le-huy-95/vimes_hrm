@@ -71,3 +71,25 @@ class TasksDragRequested extends TasksEvent {
   @override
   List<Object?> get props => [task.id, toStatus];
 }
+
+class TasksAssignRequested extends TasksEvent {
+  const TasksAssignRequested({
+    required this.code,
+    required this.userId,
+  });
+  final String code;
+  final String userId;
+  @override
+  List<Object?> get props => [code, userId];
+}
+
+class TasksFocusRequested extends TasksEvent {
+  const TasksFocusRequested(this.taskId);
+  final String taskId;
+  @override
+  List<Object?> get props => [taskId];
+}
+
+class TasksFocusCleared extends TasksEvent {
+  const TasksFocusCleared();
+}

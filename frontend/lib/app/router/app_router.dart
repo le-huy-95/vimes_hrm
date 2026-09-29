@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:manage_teams/features/ai/pages/ai_page.dart';
 import 'package:manage_teams/features/auth/bloc/auth_bloc.dart';
 import 'package:manage_teams/features/auth/bloc/auth_state.dart';
 import 'package:manage_teams/features/auth/pages/forgot_password_page.dart';
+import 'package:manage_teams/features/auth/pages/link_google_page.dart';
 import 'package:manage_teams/features/auth/pages/login_page.dart';
 import 'package:manage_teams/features/auth/pages/register_page.dart';
 import 'package:manage_teams/features/auth/pages/reset_password_page.dart';
@@ -40,10 +42,12 @@ enum AppRoutes {
   verifyOtp('/verify-otp'),
   forgotPassword('/forgot-password'),
   resetPassword('/reset-password'),
+  linkGoogle('/link-google'),
   home('/home'),
   tasks('/tasks'),
   chat('/chat'),
-  sync('/sync');
+  sync('/sync'),
+  ai('/ai');
 
   const AppRoutes(this.path);
   final String path;
@@ -94,17 +98,25 @@ GoRouter createAppRouter(AuthBloc authBloc) {
       final isAppRoute = loc == AppRoutes.home.path ||
           loc == AppRoutes.tasks.path ||
           loc == AppRoutes.chat.path ||
-          loc == AppRoutes.sync.path;
+          loc == AppRoutes.sync.path ||
+          loc == AppRoutes.ai.path;
 
       if (auth is AuthUnknown || auth is AuthLoading) {
         return loc == AppRoutes.splash.path ? null : AppRoutes.splash.path;
       }
       if (auth is AuthAuthenticated) {
-        if (isAuthRoute) return AppRoutes.home.path;
+        final needsLink = auth.needsGoogleLink;
+        final onLinkPage = loc == AppRoutes.linkGoogle.path;
+        if (needsLink) {
+          return onLinkPage ? null : AppRoutes.linkGoogle.path;
+        }
+        if (onLinkPage || isAuthRoute) return AppRoutes.home.path;
         return null;
       }
       if (auth is AuthUnauthenticated || auth is AuthFailure) {
-        if (isAppRoute || loc == AppRoutes.splash.path) {
+        if (isAppRoute ||
+            loc == AppRoutes.splash.path ||
+            loc == AppRoutes.linkGoogle.path) {
           return AppRoutes.login.path;
         }
         return null;
@@ -152,6 +164,14 @@ GoRouter createAppRouter(AuthBloc authBloc) {
             infoMessage: _extraString(state.extra, 'message'),
           );
         },
+      ),
+      GoRoute(
+        path: AppRoutes.linkGoogle.path,
+        builder: (context, state) => const LinkGooglePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.ai.path,
+        builder: (context, state) => const AiPage(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
