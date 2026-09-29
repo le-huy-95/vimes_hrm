@@ -4,9 +4,11 @@ on:
   push:
     paths:
       - "backend/**"
+      - ".github/workflows/backend-ci.yml"
   pull_request:
     paths:
       - "backend/**"
+      - ".github/workflows/backend-ci.yml"
 
 jobs:
   backend:
@@ -25,6 +27,8 @@ jobs:
           cache: pnpm
           cache-dependency-path: backend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      - name: Security env check (CI)
+        run: bash scripts/security-env-check.sh --ci
       - run: pnpm build
-      - run: pnpm test
       - run: pnpm typecheck
+      - run: pnpm test

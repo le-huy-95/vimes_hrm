@@ -1,0 +1,26 @@
+<h2>Phạm vi sửa UI board?</h2>
+<p class="subtitle">Màu vẫn dùng ColorSkin hệ thống — chỉ hỏi layout nào cần đổi. Click để chọn.</p>
+
+<div class="options">
+  <div class="option" data-choice="card-only" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Chỉ thẻ task</h3>
+      <p>Đổi layout card: badge ID + icon trạng thái · title · avatar/tên · ngày · comment. Giữ nguyên header cột, empty state, nút tạo task hiện tại.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="card-and-columns" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Thẻ + cột (khuyến nghị)</h3>
+      <p>Đổi card như ảnh, thêm header cột (tên · count · ⋯), empty drop zone dashed khi cột trống. Giữ tab Board/List/Lịch và nút tạo task như hiện tại.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="full-board" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Toàn bộ board như ảnh</h3>
+      <p>Card + cột + style tab underline + FAB (+) góc phải. Đổi nhiều hơn, chạm cả chrome ngoài card.</p>
+    </div>
+  </div>
+</div>

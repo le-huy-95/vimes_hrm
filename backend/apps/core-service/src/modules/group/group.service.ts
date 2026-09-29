@@ -3,6 +3,12 @@ import { prismaRead, prismaWrite, Prisma } from "@manage-teams/db";
 import { TOPICS } from "@manage-teams/contracts";
 import { requireGroupAdmin, requireGroupMember, requireOrgAdmin, requireOrgMember } from "../access/access.service.js";
 import { envelope, notifyChat } from "../../infra/outbox.service.js";
+import {
+  getGroupDetailCache,
+  invalidateGroupDetailCache,
+  setGroupDetailCache,
+} from "../../infra/group-cache.js";
+import { invalidateTaskListCache } from "../../infra/task-cache.js";
 
 export async function createGroup(orgId: string, userId: string, name: string) {
   await requireOrgAdmin(orgId, userId);
@@ -54,6 +60,9 @@ export async function listGroups(orgId: string, userId: string) {
 
 export async function getGroup(groupId: string, userId: string) {
   await requireGroupMember(groupId, userId);
+  const cached = await getGroupDetailCache(groupId);
+  if (cached) return cached;
+
   const group = await prismaRead.group.findUnique({
     where: { id: groupId },
     include: {
@@ -64,7 +73,7 @@ export async function getGroup(groupId: string, userId: string) {
     },
   });
   if (!group) throw new AppError("Không tìm thấy", "NOT_FOUND", 404);
-  return {
+  const detail = {
     id: group.id,
     organizationId: group.organizationId,
     name: group.name,
@@ -76,6 +85,8 @@ export async function getGroup(groupId: string, userId: string) {
       displayName: m.user.displayName,
     })),
   };
+  await setGroupDetailCache(groupId, detail);
+  return detail;
 }
 
 export async function addGroupMember(
@@ -113,6 +124,8 @@ export async function addGroupMember(
     groupId,
     memberIds: [targetUserId],
   });
+
+  await invalidateGroupDetailCache(groupId);
 
   return { groupId, userId: member.userId, role: member.role, status: member.status };
 }
@@ -153,6 +166,9 @@ export async function removeGroupMember(groupId: string, actorId: string, target
   });
 
   void notifyChat("/internal/conversations/remove-member", { groupId, userId: targetUserId });
+
+  await invalidateGroupDetailCache(groupId);
+  await invalidateTaskListCache(groupId);
 }
 
 export async function leaveGroup(groupId: string, userId: string) {
@@ -203,6 +219,9 @@ export async function leaveGroup(groupId: string, userId: string) {
   });
 
   void notifyChat("/internal/conversations/remove-member", { groupId, userId });
+
+  await invalidateGroupDetailCache(groupId);
+  await invalidateTaskListCache(groupId);
 
   const chatResults = await leaveLinkedSpacesViaSync(userId, groupId);
   return { leftGroup: true as const, chatResults };

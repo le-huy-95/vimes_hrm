@@ -1,0 +1,24 @@
+<h2>Icon góc phải trên thẻ?</h2>
+<p class="subtitle">Đã chốt: full board · ẩn comment · giữ nút “+ Tạo task” header (không FAB).</p>
+
+<div class="section">
+  <p class="label">Ghi chú</p>
+  <p>Ảnh có check / vòng trống trên 2 thẻ cùng cột Todo — có lẽ mock không nhất quán. Trong app, status thật là <code>TODO | IN_PROGRESS | DONE</code> (đã phản ánh bằng cột).</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="mirror-status" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Icon theo task.status (khuyến nghị)</h3>
+      <p>TODO = vòng trống · Đang làm = vòng secondary · Done = check primary. Giống layout ảnh, dùng ColorSkin, hữu ích khi kéo thẻ.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="omit-icon" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Bỏ icon</h3>
+      <p>Cột đã nói status — tránh trùng thông tin. Header thẻ chỉ còn badge ID.</p>
+    </div>
+  </div>
+</div>

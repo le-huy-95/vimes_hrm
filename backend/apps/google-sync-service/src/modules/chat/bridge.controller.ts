@@ -13,7 +13,7 @@ const internalToken = process.env.INTERNAL_SERVICE_TOKEN ?? "dev-internal-token"
 
 function requireInternal(req: Request): void {
   if (req.header("x-internal-token") !== internalToken) {
-    throw new AppError("Unauthorized", "UNAUTHORIZED", 401);
+    throw new AppError("Chưa xác thực", "UNAUTHORIZED", 401);
   }
 }
 

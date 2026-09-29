@@ -320,6 +320,27 @@ export async function processTaskPullJob(job: {
           }
         }
 
+        {
+          const desiredParentId = await resolveLocalParentIdFromGoogle(
+            job.userId,
+            listId,
+            item.parent ?? undefined,
+          );
+          const taskRow = await prismaRead.task.findUnique({ where: { id: taskId } });
+          if (
+            taskRow &&
+            !localWinsConflict(taskRow.updatedAt, item.updated) &&
+            desiredParentId !== taskRow.parentId
+          ) {
+            await prismaWrite.task.update({
+              where: { id: taskId },
+              data: { parentId: desiredParentId, version: { increment: 1 } },
+            });
+            applied += 1;
+            changedFields.push("parent");
+          }
+        }
+
         if (link) {
           await prismaWrite.googleTaskLink.update({
             where: { id: link.id },
@@ -513,7 +534,7 @@ async function listAllTasks(
         updatedMin,
         maxResults: 100,
         pageToken,
-        fields: "nextPageToken,items(id,etag,title,notes,status,updated,deleted,completed,due)",
+        fields: "nextPageToken,items(id,etag,title,notes,status,updated,deleted,completed,due,parent)",
       });
       out.push(...(listed.data.items ?? []));
       pageToken = listed.data.nextPageToken ?? undefined;
@@ -546,6 +567,27 @@ async function resolveImportGroupId(
     orderBy: { groupId: "asc" },
   });
   return any?.groupId ?? null;
+}
+
+async function resolveLocalParentIdFromGoogle(
+  userId: string,
+  listId: string,
+  googleParentId: string | null | undefined,
+): Promise<string | null> {
+  if (!googleParentId) return null;
+  const parentLink = await prismaRead.googleTaskLink.findFirst({
+    where: {
+      userId,
+      googleTasklistId: listId,
+      googleTaskId: googleParentId,
+      status: "LINKED",
+    },
+  });
+  if (!parentLink) return null;
+  const parentTask = await prismaRead.task.findFirst({
+    where: { id: parentLink.taskId, deletedAt: null, parentId: null },
+  });
+  return parentTask?.id ?? null;
 }
 
 async function nextTaskCode(tx: Prisma.TransactionClient, groupId: string): Promise<string> {
@@ -586,6 +628,11 @@ async function importGoogleNativeTask(opts: {
   const googleDone = item.status === "completed";
   const personal = (item.notes ?? "").trim().slice(0, 4000);
   const dueOnly = googleDueToDateOnly(item.due);
+  const parentId = await resolveLocalParentIdFromGoogle(
+    userId,
+    listId,
+    item.parent ?? undefined,
+  );
 
   try {
     const task = await prismaWrite.$transaction(async (tx) => {
@@ -601,6 +648,7 @@ async function importGoogleNativeTask(opts: {
           allowClaim: true,
           createdById: userId,
           dueDate: dueOnly ? new Date(`${dueOnly}T00:00:00.000Z`) : null,
+          parentId,
         },
       });
       await tx.taskAssignee.create({

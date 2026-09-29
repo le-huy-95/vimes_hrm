@@ -1,0 +1,26 @@
+<h2>Nút tạo task trên board?</h2>
+<p class="subtitle">Đã chốt: full board · ẩn comment. Ảnh có FAB (+); app hiện có nút “+ Tạo task” trên header.</p>
+
+<div class="options">
+  <div class="option" data-choice="fab-only" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>FAB (+) như ảnh (khuyến nghị)</h3>
+      <p>Bỏ nút “+ Tạo task” trên header khi đang xem Board. FloatingActionButton góc phải, màu ColorSkin.primary. List/Lịch giữ nút header.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="keep-header" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Giữ nút header</h3>
+      <p>Không thêm FAB — chỉ đổi card/cột/tab. Ít đổi hành vi hơn.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="both" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Cả hai</h3>
+      <p>Header + FAB — trùng affordance, dễ rối.</p>
+    </div>
+  </div>
+</div>

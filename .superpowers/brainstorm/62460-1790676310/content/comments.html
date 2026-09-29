@@ -1,0 +1,26 @@
+<h2>Comment trên thẻ task?</h2>
+<p class="subtitle">Đã chọn: <strong>C — toàn bộ board</strong>. API task hiện <em>chưa có</em> số comment. Xử lý thế nào?</p>
+
+<div class="options">
+  <div class="option" data-choice="hide-comments" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Ẩn comment (khuyến nghị)</h3>
+      <p>Footer chỉ: avatar + tên · ngày. Không hiện icon chat cho đến khi backend có data.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="show-zero" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Hiện icon + luôn 0</h3>
+      <p>Giống layout ảnh (có chat bubble) nhưng số luôn là 0 — placeholder UI.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="wire-backend" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Làm cả backend</h3>
+      <p>Thêm commentCount vào API rồi hiện số thật — scope lớn hơn nhiều.</p>
+    </div>
+  </div>
+</div>

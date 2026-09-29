@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:manage_teams/features/auth/data/auth_models.dart';
 
 sealed class AuthEvent extends Equatable {
   const AuthEvent();
@@ -26,17 +27,30 @@ class AuthLoginRequested extends AuthEvent {
 
 class AuthGoogleLoginRequested extends AuthEvent {
   const AuthGoogleLoginRequested({
-    required this.idToken,
+    this.idToken = '',
     this.serverAuthCode,
+    this.redirectUri,
   });
 
   final String idToken;
   final String? serverAuthCode;
+  final String? redirectUri;
 
   @override
-  List<Object?> get props => [idToken, serverAuthCode];
+  List<Object?> get props => [idToken, serverAuthCode, redirectUri];
 }
 
 class AuthLogoutRequested extends AuthEvent {
   const AuthLogoutRequested();
+}
+
+class AuthSessionRefreshRequested extends AuthEvent {
+  const AuthSessionRefreshRequested();
+}
+
+class AuthGoogleLinked extends AuthEvent {
+  const AuthGoogleLinked(this.user);
+  final AuthUser user;
+  @override
+  List<Object?> get props => [user.id, user.googleAccounts.length];
 }

@@ -39,7 +39,7 @@ export async function nextStepWithFallback(
       mock: primary.name === "mock",
     };
   } catch {
-    if (requireLlm) throw new AppError("LLM provider failed", "AI_PROVIDER", 502);
+    if (requireLlm) throw new AppError("Nhà cung cấp AI thất bại", "AI_PROVIDER", 502);
     return {
       step: await fallback.nextStep(input),
       provider: fallback,
@@ -56,14 +56,14 @@ export async function runChat(input: {
   provider?: LLMProvider;
 }): Promise<ChatResult> {
   const message = input.message.trim();
-  if (!message) throw new AppError("message required", "VALIDATION", 400);
+  if (!message) throw new AppError("Cần nội dung tin nhắn", "VALIDATION", 400);
 
   let sessionId = input.sessionId;
   if (sessionId) {
     const s = await prismaRead.aiSession.findFirst({
       where: { id: sessionId, userId: input.userId },
     });
-    if (!s) throw new AppError("session not found", "NOT_FOUND", 404);
+    if (!s) throw new AppError("Không tìm thấy phiên chat", "NOT_FOUND", 404);
   } else {
     const s = await prismaWrite.aiSession.create({
       data: { userId: input.userId, title: message.slice(0, 80) },
@@ -88,7 +88,7 @@ export async function runChat(input: {
 
   for (let round = 0; round < maxRounds; round++) {
     if (Date.now() > deadline) {
-      throw new AppError("AI request timeout", "AI_TIMEOUT", 504);
+      throw new AppError("Yêu cầu AI hết thời gian chờ", "AI_TIMEOUT", 504);
     }
 
     let step: PlanStep;
@@ -108,7 +108,7 @@ export async function runChat(input: {
       }
     } catch (e) {
       if (e instanceof AppError) throw e;
-      throw new AppError("AI request failed", "AI_PROVIDER", 502);
+      throw new AppError("Yêu cầu AI thất bại", "AI_PROVIDER", 502);
     }
 
     if (step.kind === "final") {

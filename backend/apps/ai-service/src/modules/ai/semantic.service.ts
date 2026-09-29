@@ -55,7 +55,7 @@ export async function searchMessagesSemantic(input: {
   limit?: number;
 }) {
   const q = input.q.trim();
-  if (q.length < 2) throw new AppError("Query quá ngắn", "VALIDATION", 400);
+  if (q.length < 2) throw new AppError("Từ khóa tìm kiếm quá ngắn", "VALIDATION", 400);
   const limit = Math.min(input.limit ?? 20, 50);
 
   const memberships = await prismaRead.groupMember.findMany({

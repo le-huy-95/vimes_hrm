@@ -1,0 +1,80 @@
+<h2>Trợ lý AI nên vào app từ đâu?</h2>
+<p class="subtitle">Chọn 1 hướng — ảnh hưởng shell, route và UX Phase 6a</p>
+
+<div class="cards">
+  <div class="card" data-choice="tab" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup" style="margin:0;border:none;box-shadow:none">
+        <div class="mockup-body" style="padding:12px;background:#f7faf9">
+          <div style="background:#fff;border:1px solid #d0d5dd;border-radius:8px;overflow:hidden">
+            <div class="mock-nav" style="font-size:11px;padding:8px 10px">Vimes · Org ▾</div>
+            <div style="padding:16px;min-height:90px;color:#5c7478;font-size:12px">Màn chat AI full tab</div>
+            <div style="display:flex;border-top:1px solid #e4e7ec;font-size:10px;text-align:center">
+              <div style="flex:1;padding:8px;color:#5c7478">Home</div>
+              <div style="flex:1;padding:8px;color:#5c7478">Tasks</div>
+              <div style="flex:1;padding:8px;color:#5c7478">Chat</div>
+              <div style="flex:1;padding:8px;color:#5c7478">Sync</div>
+              <div style="flex:1;padding:8px;color:#0e7c86;font-weight:700;border-top:2px solid #0e7c86">AI</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Tab mới “AI”</h3>
+      <p>Thêm tab thứ 5 trên bottom nav / top nav. Luôn sẵn, dễ tìm.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="home" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup" style="margin:0;border:none;box-shadow:none">
+        <div class="mockup-body" style="padding:12px;background:#f7faf9">
+          <div style="background:#fff;border:1px solid #d0d5dd;border-radius:8px;overflow:hidden">
+            <div class="mock-nav" style="font-size:11px;padding:8px 10px">Vimes · Home</div>
+            <div style="padding:12px">
+              <div style="border:1px solid #0e7c86;background:#e4f2f1;border-radius:8px;padding:10px;font-size:12px;color:#0a5c64">
+                ✦ Trợ lý AI →
+              </div>
+              <div class="placeholder" style="margin-top:8px;height:40px;font-size:11px">Org / Group cards…</div>
+            </div>
+            <div style="display:flex;border-top:1px solid #e4e7ec;font-size:10px;text-align:center">
+              <div style="flex:1;padding:8px;color:#0e7c86;font-weight:700">Home</div>
+              <div style="flex:1;padding:8px;color:#5c7478">Tasks</div>
+              <div style="flex:1;padding:8px;color:#5c7478">Chat</div>
+              <div style="flex:1;padding:8px;color:#5c7478">Sync</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Card trên Home</h3>
+      <p>Giữ 4 tab; mở `/ai` từ Home. Ít đụng shell hơn.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="fab" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup" style="margin:0;border:none;box-shadow:none">
+        <div class="mockup-body" style="padding:12px;background:#f7faf9">
+          <div style="background:#fff;border:1px solid #d0d5dd;border-radius:8px;overflow:hidden;position:relative">
+            <div class="mock-nav" style="font-size:11px;padding:8px 10px">Vimes · Tasks</div>
+            <div class="placeholder" style="margin:12px;height:70px;font-size:11px">Kanban…</div>
+            <div style="position:absolute;right:16px;bottom:48px;width:40px;height:40px;border-radius:20px;background:#0e7c86;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px">✦</div>
+            <div style="display:flex;border-top:1px solid #e4e7ec;font-size:10px;text-align:center">
+              <div style="flex:1;padding:8px;color:#5c7478">Home</div>
+              <div style="flex:1;padding:8px;color:#0e7c86;font-weight:700">Tasks</div>
+              <div style="flex:1;padding:8px;color:#5c7478">Chat</div>
+              <div style="flex:1;padding:8px;color:#5c7478">Sync</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — FAB mọi tab</h3>
+      <p>Nút nổi ✦ mở sheet/full-screen AI. Nhanh nhưng dễ che UI.</p>
+    </div>
+  </div>
+</div>

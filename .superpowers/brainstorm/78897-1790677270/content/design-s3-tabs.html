@@ -1,0 +1,45 @@
+<h2>Design §3 — Tab Board / List / Lịch</h2>
+<p class="subtitle">§1–§2 đã duyệt. Ảnh mock dùng underline; app hiện dùng ChoiceChip.</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">A — Underline (như ảnh)</div>
+    <div class="mockup-body" style="padding:16px;">
+      <div style="display:flex;gap:20px;border-bottom:1px solid #E4E7EC;">
+        <span style="padding-bottom:8px;font-weight:700;color:#0E7C86;border-bottom:2px solid #0E7C86;margin-bottom:-1px;">Board</span>
+        <span style="padding-bottom:8px;font-weight:600;color:#5C7478;">List</span>
+        <span style="padding-bottom:8px;font-weight:600;color:#5C7478;">Lịch</span>
+      </div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">B — Giữ ChoiceChip</div>
+    <div class="mockup-body" style="padding:16px;">
+      <span style="display:inline-block;background:#0E7C86;color:#fff;padding:6px 12px;border-radius:16px;font-weight:600;font-size:13px;margin-right:6px;">Board</span>
+      <span style="display:inline-block;background:#F5F7F7;color:#132B2E;padding:6px 12px;border-radius:16px;font-weight:600;font-size:13px;margin-right:6px;">List</span>
+      <span style="display:inline-block;background:#F5F7F7;color:#132B2E;padding:6px 12px;border-radius:16px;font-weight:600;font-size:13px;">Lịch</span>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p><strong>Khuyến nghị A:</strong> đã chọn “full board như ảnh”; underline primary khớp mock, vẫn ColorSkin. Header “Công việc” + nút “+ Tạo task” giữ nguyên.</p>
+  <p><strong>B:</strong> ít đổi hơn — chỉ card + cột.</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="tabs-underline" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Underline tabs</h3>
+      <p>Như ảnh — khuyến nghị.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="tabs-chips" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Giữ ChoiceChip</h3>
+      <p>Không đổi tab style.</p>
+    </div>
+  </div>
+</div>

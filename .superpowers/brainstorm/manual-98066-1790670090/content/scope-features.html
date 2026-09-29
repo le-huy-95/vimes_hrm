@@ -1,0 +1,75 @@
+<h2>Bạn muốn bổ sung những gì trước?</h2>
+<p class="subtitle">
+  Chọn nhiều mục. Hiện sync chỉ có: <strong>title · notes · hoàn thành</strong>.
+  Google Tasks API <em>không có</em> gán người / giờ bắt đầu–kết thúc — 2 mục đó sẽ là tính năng app (có thể ghi chú sang Google).
+</p>
+
+<div class="options" data-multiselect>
+  <div class="option" data-choice="due" onclick="toggleSelect(this)">
+    <div class="letter">1</div>
+    <div class="content">
+      <h3>Hạn chót (due date)</h3>
+      <p>Giống “Hôm nay / Ngày mai / Thêm thời hạn” trên Google — đồng bộ 2 chiều qua field <code>due</code>.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="assign" onclick="toggleSelect(this)">
+    <div class="letter">2</div>
+    <div class="content">
+      <h3>Gán người làm (assignee)</h3>
+      <p>UI Flutter chọn member nhóm + API đã có sẵn một phần. Google Tasks cá nhân <strong>không hỗ trợ</strong> assignee — chỉ sync bản chiếu cho từng người được gán.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="time-range" onclick="toggleSelect(this)">
+    <div class="letter">3</div>
+    <div class="content">
+      <h3>Giờ bắt đầu &amp; kết thúc</h3>
+      <p>Không có trên Google Tasks (chỉ có due date). Lưu trên app; có thể encode vào notes hoặc chỉ hiện trong Flutter.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="subtasks" onclick="toggleSelect(this)">
+    <div class="letter">4</div>
+    <div class="content">
+      <h3>Việc phụ (subtasks)</h3>
+      <p>Google có parent/position — chưa sync. App hiện chưa có model subtask.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="star" onclick="toggleSelect(this)">
+    <div class="letter">5</div>
+    <div class="content">
+      <h3>Gắn sao / Có gắn dấu sao</h3>
+      <p>Google UI có “Thêm vào thư mục Có gắn dấu sao”. API không có field star rõ — thường là list riêng.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="attachments" onclick="toggleSelect(this)">
+    <div class="letter">6</div>
+    <div class="content">
+      <h3>Đính kèm Drive</h3>
+      <p>Google có “Thêm tài liệu đính kèm”. App đã có file/chat attachments — chưa nối sang Google Task links.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="lists" onclick="toggleSelect(this)">
+    <div class="letter">7</div>
+    <div class="content">
+      <h3>Nhiều danh sách Tasks</h3>
+      <p>Hiện cố định 1 list “Manage Teams”. Muốn map group ↔ tasklist hoặc cho user chọn list?</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="parity-all" onclick="toggleSelect(this)">
+    <div class="letter">★</div>
+    <div class="content">
+      <h3>Parity gần hết UI Google Tasks</h3>
+      <p>Làm hết 1–7 trong một đợt (rủi ro scope lớn). Khuyến nghị: chọn 2–3 mục ưu tiên trước.</p>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:1.5rem">
+  Click để chọn → rồi trả lời trên chat (ví dụ: “1, 2, 3” hoặc mô tả thêm).
+</p>

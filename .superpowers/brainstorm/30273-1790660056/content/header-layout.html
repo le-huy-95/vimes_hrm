@@ -1,0 +1,104 @@
+<h2>Header workspace switcher — chọn layout nào?</h2>
+<p class="subtitle">Logo thay chữ Vimes. Email + org/group bên cạnh. Click mở menu. Chọn 1 phương án.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f7f8fa;">
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;font-family:system-ui;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:28px;height:28px;border-radius:6px;background:#0d9488;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;">V</div>
+          <div style="flex:1;min-width:0;cursor:pointer;border:1px dashed #0d9488;border-radius:6px;padding:4px 8px;">
+            <div style="font-size:13px;font-weight:600;color:#111;">you@company.com ▾</div>
+            <div style="font-size:11px;color:#64748b;">Acme Corp · Design Team</div>
+          </div>
+          <div style="font-size:12px;color:#94a3b8;">Tabs…</div>
+        </div>
+        <div style="margin-top:10px;border:1px solid #e5e7eb;border-radius:8px;padding:8px;background:#fafafa;font-size:12px;">
+          <div style="font-size:10px;text-transform:uppercase;color:#94a3b8;margin-bottom:4px;">Tài khoản Google</div>
+          <div style="padding:4px 6px;background:#ccfbf1;border-radius:4px;margin-bottom:2px;">✓ you@company.com</div>
+          <div style="padding:4px 6px;">other@gmail.com</div>
+          <div style="padding:4px 6px;color:#0d9488;">+ Liên kết email khác</div>
+          <hr style="border:none;border-top:1px solid #e5e7eb;margin:8px 0;">
+          <div style="font-size:10px;text-transform:uppercase;color:#94a3b8;margin-bottom:4px;">Tổ chức</div>
+          <div style="padding:4px 6px;background:#ccfbf1;border-radius:4px;">✓ Acme Corp</div>
+          <div style="padding:4px 6px;">Beta Inc</div>
+          <hr style="border:none;border-top:1px solid #e5e7eb;margin:8px 0;">
+          <div style="font-size:10px;text-transform:uppercase;color:#94a3b8;margin-bottom:4px;">Nhóm (theo org)</div>
+          <div style="padding:4px 6px;background:#ccfbf1;border-radius:4px;">✓ Design Team</div>
+          <div style="padding:4px 6px;">Engineering</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Một dropdown gộp</h3>
+      <p>Email + org + group trong cùng 1 menu. Nhanh, mọi thứ một chỗ.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f7f8fa;">
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;font-family:system-ui;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:28px;height:28px;border-radius:6px;background:#0d9488;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;">V</div>
+          <div style="cursor:pointer;border:1px dashed #0d9488;border-radius:6px;padding:4px 8px;max-width:160px;">
+            <div style="font-size:13px;font-weight:600;">you@… ▾</div>
+            <div style="font-size:10px;color:#64748b;">Tài khoản</div>
+          </div>
+          <div style="cursor:pointer;border:1px dashed #6366f1;border-radius:6px;padding:4px 8px;">
+            <div style="font-size:13px;font-weight:600;">Acme · Design ▾</div>
+            <div style="font-size:10px;color:#64748b;">Workspace</div>
+          </div>
+          <div style="font-size:12px;color:#94a3b8;">Tabs…</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <div style="flex:1;border:1px solid #e5e7eb;border-radius:8px;padding:8px;background:#fafafa;font-size:11px;">
+            <div style="color:#94a3b8;font-size:10px;">EMAILS</div>
+            <div style="background:#ccfbf1;padding:3px;border-radius:3px;margin-top:4px;">you@…</div>
+            <div style="padding:3px;">other@…</div>
+            <div style="color:#0d9488;padding:3px;">+ Link</div>
+          </div>
+          <div style="flex:1;border:1px solid #e5e7eb;border-radius:8px;padding:8px;background:#fafafa;font-size:11px;">
+            <div style="color:#94a3b8;font-size:10px;">ORG → GROUP</div>
+            <div style="background:#e0e7ff;padding:3px;border-radius:3px;margin-top:4px;">Acme</div>
+            <div style="padding:3px;">↳ Design ✓</div>
+            <div style="padding:3px;">↳ Eng</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Hai nút tách</h3>
+      <p>Một nút chọn email, một nút chọn org/group. Rõ trách nhiệm hơn.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f7f8fa;">
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;font-family:system-ui;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:28px;height:28px;border-radius:6px;background:#0d9488;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;">V</div>
+          <div style="flex:1;border:1px dashed #0d9488;border-radius:6px;padding:4px 8px;">
+            <div style="font-size:13px;font-weight:600;">you@company.com ▾</div>
+            <div style="font-size:11px;color:#64748b;">Acme Corp · Design Team</div>
+          </div>
+          <div style="font-size:12px;color:#94a3b8;">Tabs…</div>
+        </div>
+        <div style="margin-top:10px;border:1px solid #e5e7eb;border-radius:8px;padding:8px;background:#fafafa;font-size:12px;">
+          <div style="display:flex;gap:4px;margin-bottom:8px;">
+            <span style="padding:4px 10px;background:#0d9488;color:#fff;border-radius:999px;font-size:11px;">Email</span>
+            <span style="padding:4px 10px;background:#e2e8f0;border-radius:999px;font-size:11px;">Tổ chức</span>
+            <span style="padding:4px 10px;background:#e2e8f0;border-radius:999px;font-size:11px;">Nhóm</span>
+          </div>
+          <div style="padding:4px 6px;background:#ccfbf1;border-radius:4px;">✓ you@company.com</div>
+          <div style="padding:4px 6px;">other@gmail.com</div>
+          <div style="padding:4px 6px;color:#0d9488;">+ Liên kết email khác</div>
+          <div style="margin-top:6px;font-size:10px;color:#94a3b8;">→ Tab Tổ chức / Nhóm đổi nội dung</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Một nút, menu có tab</h3>
+      <p>Một trigger như A, nhưng trong menu chia tab Email / Tổ chức / Nhóm.</p>
+    </div>
+  </div>
+</div>

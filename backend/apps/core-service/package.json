@@ -8,13 +8,15 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "tsx watch --env-file=../../.env src/index.ts",
     "start": "node --env-file=../../.env dist/index.js",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "lint": "echo \"no lint yet\""
   },
   "dependencies": {
+    "@manage-teams/cache-keys": "workspace:*",
     "@manage-teams/lib": "workspace:*",
     "@manage-teams/contracts": "workspace:*",
     "@manage-teams/db": "workspace:*",
+    "redis": "^4.7.0",
     "express": "^4.21.2",
     "jose": "^5.9.6",
     "zod": "^3.24.1"

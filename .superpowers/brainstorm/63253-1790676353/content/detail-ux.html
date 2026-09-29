@@ -1,0 +1,59 @@
+<h2>Màn chi tiết task (bước A) — mở thế nào?</h2>
+<p class="subtitle">Chọn cách vào / hiện form sửa title, notes, due, assignee.</p>
+
+<div class="cards">
+  <div class="card" data-choice="sheet" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="display:flex;min-height:160px;padding:12px;gap:8px;font-size:11px">
+        <div style="flex:1;opacity:0.45;background:#f0f4f4;border-radius:8px;padding:8px">
+          <div style="font-weight:700;margin-bottom:6px">Board</div>
+          <div style="background:#fff;border-radius:6px;padding:6px;margin-bottom:4px">Task A</div>
+          <div style="background:#fff;border-radius:6px;padding:6px">Task B</div>
+        </div>
+        <div style="width:42%;background:#fff;border-radius:10px 0 0 10px;box-shadow:-4px 0 16px rgba(0,0,0,.08);padding:12px">
+          <div style="font-weight:700;font-size:13px;margin-bottom:8px">Chi tiết</div>
+          <div style="height:10px;background:#e5e7eb;border-radius:4px;margin-bottom:6px"></div>
+          <div style="height:28px;background:#e5e7eb;border-radius:4px;margin-bottom:6px"></div>
+          <div style="height:10px;background:#e5e7eb;border-radius:4px;width:60%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>1 — Bottom / side sheet</h3>
+      <p>Tap card → sheet đè lên board. Gần Google Tasks mobile; không đổi route.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="dialog" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="display:flex;align-items:center;justify-content:center;min-height:160px;padding:16px;position:relative;font-size:11px">
+        <div style="position:absolute;inset:12px;opacity:0.35;background:#f0f4f4;border-radius:8px"></div>
+        <div style="position:relative;width:70%;background:#fff;border-radius:12px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.12)">
+          <div style="font-weight:700;margin-bottom:8px">Chi tiết task</div>
+          <div style="height:10px;background:#e5e7eb;border-radius:4px;margin-bottom:6px"></div>
+          <div style="height:36px;background:#e5e7eb;border-radius:4px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>2 — Dialog giữa màn</h3>
+      <p>Tap card → dialog. Nhanh ship, khớp create dialog hiện có; kém “Google-like” hơn.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="page" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="min-height:160px;padding:12px;font-size:11px">
+        <div style="font-size:10px;color:#64748b;margin-bottom:8px">← Công việc</div>
+        <div style="font-weight:700;font-size:14px;margin-bottom:10px">Viết brief sprint</div>
+        <div style="height:10px;background:#e5e7eb;border-radius:4px;margin-bottom:6px;width:80%"></div>
+        <div style="height:48px;background:#e5e7eb;border-radius:4px;margin-bottom:8px"></div>
+        <div style="height:10px;background:#e5e7eb;border-radius:4px;width:40%"></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>3 — Trang chi tiết riêng</h3>
+      <p>Navigate sang route mới. Rộng chỗ cho B (subtasks) sau; nặng hơn cho bước A.</p>
+    </div>
+  </div>
+</div>

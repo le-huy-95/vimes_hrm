@@ -1,0 +1,3 @@
+{"type":"server-started","port":53677,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:53677","screen_dir":"/Users/huy/Documents/code/manage-teams/.superpowers/brainstorm/96709-1790669782/content","state_dir":"/Users/huy/Documents/code/manage-teams/.superpowers/brainstorm/96709-1790669782/state"}
+fs.watch error: EMFILE: too many open files, watch
+{"type":"server-stopped","reason":"owner process exited"}

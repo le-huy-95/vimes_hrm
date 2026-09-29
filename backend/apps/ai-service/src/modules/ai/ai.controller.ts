@@ -80,7 +80,7 @@ export async function adminOps(req: Request, res: Response): Promise<void> {
 export async function indexMessage(req: Request, res: Response): Promise<void> {
   try {
     if (req.header("x-internal-token") !== internalToken) {
-      throw new AppError("Unauthorized", "UNAUTHORIZED", 401);
+      throw new AppError("Chưa xác thực", "UNAUTHORIZED", 401);
     }
     const body = IndexSchema.parse(req.body);
     await semanticService.indexMessageEmbedding({
@@ -98,7 +98,7 @@ export async function indexMessage(req: Request, res: Response): Promise<void> {
 export async function botAsk(req: Request, res: Response): Promise<void> {
   try {
     if (req.header("x-internal-token") !== internalToken) {
-      throw new AppError("Unauthorized", "UNAUTHORIZED", 401);
+      throw new AppError("Chưa xác thực", "UNAUTHORIZED", 401);
     }
     const body = BotAskSchema.parse(req.body);
     res.json(await aiService.runChat({ userId: body.userId, message: body.message }));

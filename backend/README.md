@@ -1,97 +1,155 @@
-# Backend — Phase 0 foundation (v2.5)
+# manage-teams backend
 
-Node.js LTS + Express + TypeScript monorepo (`pnpm` + Turborepo).
+Monorepo pnpm + turbo. Client (Flutter) chỉ gọi **api-gateway**; gateway proxy tới các service nghiệp vụ.
 
-## Layout
+## Mục đích từng service (`apps/`)
+
+### api-gateway — cổng vào duy nhất (`:3200`)
+
+**Dùng để:** nhận mọi request HTTP từ client; không chứa logic nghiệp vụ.
+
+- CORS, correlation id, rate-limit (auth vs API chung)
+- Xác minh JWT (trừ path public như `/auth/login`, `/auth/register`, `/ai/ping`)
+- Proxy:
+  - `/auth/*` → identity-service
+  - `/organizations`, `/invitations`, `/groups/*` → core-service
+  - `/conversations/*` → chat-service
+  - `/ai/*` → ai-service
+
+**Khi scale:** tăng replica gateway khi RPS edge cao.
+
+---
+
+### identity-service — xác thực & tài khoản (`:3202`)
+
+**Dùng để:** vòng đời user trước/sau đăng nhập.
+
+| Module | Chức năng |
+|--------|-----------|
+| `modules/login` | Đăng nhập email/password, Google OAuth (PKCE, id-token) |
+| `modules/auth` | Đăng ký, OTP xác minh email, quên/đặt lại mật khẩu, `/auth/me`, liên kết Google |
+
+Gửi email OTP qua **worker-service**. Đọc/ghi DB qua `prismaRead` / `prismaWrite`.
+
+**Khi scale:** tăng replica khi spike đăng nhập (đầu năm, campaign).
+
+---
+
+### core-service — nghiệp vụ tổ chức (`:3203`)
+
+**Dùng để:** quản lý org, nhóm, task — phần “làm việc nhóm”.
+
+| Module | Chức năng |
+|--------|-----------|
+| `modules/org` | Tạo org, mời thành viên, chấp nhận lời mời |
+| `modules/group` | CRUD nhóm, thêm/xóa thành viên |
+| `modules/task` | Task trong group, assign, claim, hoàn thành |
+| `modules/access` | Kiểm tra quyền org/group |
+
+Ghi outbox event (Kafka) khi task thay đổi; gọi chat internal API để tạo conversation task/group.
+
+**Khi scale:** replica core; list nặng dùng `prismaRead` (replica sau này).
+
+---
+
+### chat-service — hội thoại & realtime (`:3204`)
+
+**Dùng để:** chat nhóm/task + Socket.IO.
+
+| Phần | Chức năng |
+|------|-----------|
+| `modules/conversation` | REST list/send/edit/delete, mark read, `after_seq` bù reconnect |
+| `realtime/socket` | Socket.IO + Redis: join, typing, `auth:refresh`, presence |
+| `infra/message-cache` | Redis last-N (`cache:conv:*`) |
+| Rate-limit | `CHAT_RATE_LIMIT_PER_MIN` khi gửi tin |
+
+Internal API (core gọi): ensure group/task conversation, remove member.
+
+**Khi scale:** replica chat; sau có thể tách `realtime/` thành process riêng.
+
+---
+
+### google-sync-service — Google Tasks (`:3207`)
+
+**Dùng để:** đồng bộ một chiều app → Google Tasks (Phase 2).
+
+- Bảng `sync_jobs` + `google_task_links` (migration `004`)
+- Core enqueue khi tạo task → worker poll → Tasks API
+- Limiter in-memory; `AUTH_REQUIRED` khi thiếu/hết hạn Google token
+
+Chạy: `pnpm --filter @manage-teams/google-sync-service dev`
+
+---
+
+### worker-service — tác vụ nền (`:3206`)
+
+**Dùng để:** xử lý bất đồng bộ, không block HTTP.
+
+- Gửi email: OTP xác minh, reset mật khẩu, mời org (Handlebars templates)
+- Endpoint nội bộ `/internal/email/*` (identity/core gọi qua `WORKER_URL`)
+- Sau này: consume Kafka outbox (side-effects)
+
+**Khi scale:** tăng consumer khi hàng đợi email/event dài.
+
+---
+
+### ai-service — AI (scaffold) (`:3205`)
+
+**Dùng để:** chỗ gắn tính năng AI sau này (inference, embedding, gợi ý task…).
+
+Hiện tại: `GET /health`, `POST /ai/ping` (echo). Gateway proxy `/ai/*`.
+
+**Khi scale:** replica riêng; có thể dùng GPU node.
+
+---
+
+## Packages dùng chung
+
+| Package | Mục đích |
+|---------|----------|
+| `@manage-teams/lib` | HTTP errors, JWT, crypto, logger, health — JSDoc tiếng Việt |
+| `@manage-teams/db` | Prisma: `prismaWrite` (ghi), `prismaRead` (đọc); `DATABASE_URL_READ` tùy chọn |
+| `@manage-teams/contracts` | Schema event Kafka |
+| `@manage-teams/kafka-client` | Producer/consumer helper |
+| `@manage-teams/outbox` | Transactional outbox |
+
+## Cấu trúc trong mỗi app
 
 ```
-backend/
-  apps/hello-producer   # publishes HelloSaid via outbox → Kafka
-  apps/hello-consumer   # consumes hello.events (idempotent)
-  packages/common
-  packages/contracts
-  packages/kafka-client
-  packages/outbox       # in-memory for Phase 0; Postgres in Phase 1
-  packages/storage      # MinIO StorageProvider
-  packages/cache-keys
-  infra/docker-compose.yml
+src/
+  index.ts          # bootstrap / listen
+  app.ts            # Express assembly
+  modules/<name>/   # routes → controller → service (+ dto)
+  infra/            # oauth, mailer, outbox…
+  realtime/         # (chat) Socket.IO
+  utils/            # helper local
+tests/              # unit test (tách khỏi src)
 ```
 
-Phase 1 will add: `api-gateway`, `identity-service`, `core-service`, `messaging-service` (email stub), etc.
-
-## Prerequisites
-
-- Node 20+
-- pnpm 9 (`npx pnpm@9.15.0` nếu chưa cài global)
-- Docker Desktop
-
-## Setup
+## Dev
 
 ```bash
-cd backend
 cp .env.example .env
-pnpm install
-pnpm build
-pnpm test
+pnpm install          # tự build lib + db (postinstall)
+pnpm dev              # hoặc chạy từng filter
 ```
 
-## Infra
-
-Ports (tránh conflict máy local): Postgres `15432`, Redis `16379`, MinIO `9000/9001`, Kafka `9092`.
+Chạy riêng một service:
 
 ```bash
-cd infra
-docker compose up -d
-docker compose ps
+pnpm --filter @manage-teams/api-gateway dev
+pnpm --filter @manage-teams/identity-service dev
+pnpm --filter @manage-teams/core-service dev
+pnpm --filter @manage-teams/chat-service dev
+pnpm --filter @manage-teams/worker-service dev
+pnpm --filter @manage-teams/ai-service dev
+pnpm --filter @manage-teams/google-sync-service dev
 ```
 
-## Hello event (manual E2E)
-
-Terminal 1:
+Migrate DB (gồm `004_google_sync_jobs`):
 
 ```bash
-cd backend
-pnpm --filter @manage-teams/hello-consumer dev
+pnpm --filter @manage-teams/db migrate
 ```
 
-Terminal 2:
-
-```bash
-pnpm --filter @manage-teams/hello-producer dev
-curl -s -X POST http://localhost:3101/hello -H 'content-type: application/json' -d '{"message":"ping"}'
-curl -s http://localhost:3102/seen
-```
-
-Or one-shot publish:
-
-```bash
-pnpm --filter @manage-teams/hello-producer exec tsx src/send-once.ts
-```
-
-## Auth email (Phase 1 — Vimes)
-
-Services: `messaging-service` (templates), `identity-service` (OTP), `core-service` (org invite).
-
-```bash
-# migrate
-POSTGRES_URL=postgresql://mt:mt@localhost:15432/manage_teams npx pnpm@9.15.0 --filter @manage-teams/db migrate
-
-# terminals
-npx pnpm@9.15.0 --filter @manage-teams/messaging-service dev   # :3206
-npx pnpm@9.15.0 --filter @manage-teams/identity-service dev    # :3202
-npx pnpm@9.15.0 --filter @manage-teams/core-service dev        # :3203
-npx pnpm@9.15.0 --filter @manage-teams/api-gateway dev         # :3200 (Flutter gọi cổng này)
-```
-
-Client chỉ gọi **api-gateway** `:3200` (`/auth/*`, `/organizations/*`, `/invitations/*`). Không expose messaging internal.
-Example register + inspect OTP (no SMTP):
-
-```bash
-curl -s -X POST http://localhost:3202/auth/register \
-  -H 'content-type: application/json' \
-  -d '{"email":"you@example.com","password":"password123","displayName":"You"}'
-
-curl -s http://localhost:3206/internal/email/sent -H 'x-internal-token: dev-internal-token'
-```
-
-See `docs/superpowers/specs/2026-09-28-phase1-auth-email-vimes-design.md`.
+Nếu IDE báo đỏ `@manage-teams/lib` / `@manage-teams/db`: chạy `pnpm run build:deps` hoặc mở folder `backend/` làm workspace root (file `backend/tsconfig.json` có project references).

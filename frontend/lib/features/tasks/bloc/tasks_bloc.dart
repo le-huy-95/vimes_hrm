@@ -23,7 +23,9 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     on<TasksAssignRequested>(_onAssign);
     on<TasksAssignManyRequested>(_onAssignMany);
     on<TasksDueDateRequested>(_onDueDate);
+    on<TasksPatchRequested>(_onPatch);
     on<TasksClaimRequested>(_onClaim);
+    on<TasksDeleteRequested>(_onDelete);
     on<TasksFocusRequested>(_onFocus);
     on<TasksFocusCleared>(_onFocusCleared);
 
@@ -161,10 +163,14 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
         description: event.description?.trim().isEmpty == true
             ? null
             : event.description?.trim(),
+        parentCode: event.parentCode,
       );
       final tasks = await _core.listTasks(_groupId!);
       final next = prev.copyWith(tasks: tasks, busy: false);
-      emit(TasksActionSuccess('Đã tạo task', ready: next));
+      emit(TasksActionSuccess(
+        event.parentCode == null ? 'Đã tạo task' : 'Đã thêm subtask',
+        ready: next,
+      ));
       emit(next);
     } catch (e) {
       emit(TasksFailure(_msg(e), previous: prev));
@@ -182,30 +188,13 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     final to = event.toStatus;
     if (from == to) return;
 
-    final allowed = (from == 'TODO' && to == 'IN_PROGRESS') ||
-        (from == 'IN_PROGRESS' && to == 'DONE');
-    if (!allowed) {
-      emit(
-        TasksFailure(
-          'Chỉ hỗ trợ kéo TODO→IN_PROGRESS (claim) hoặc IN_PROGRESS→DONE (complete).',
-          previous: prev,
-        ),
-      );
-      emit(prev);
-      return;
-    }
-
     final optimistic = prev.tasks
         .map((t) => t.id == event.task.id ? t.copyWith(status: to) : t)
         .toList();
     emit(prev.copyWith(tasks: optimistic, busy: true));
 
     try {
-      if (to == 'IN_PROGRESS') {
-        await _core.claimTask(_groupId!, event.task.code);
-      } else {
-        await _core.completeTask(_groupId!, event.task.code);
-      }
+      await _core.patchTask(_groupId!, event.task.code, status: to);
       final tasks = await _core.listTasks(_groupId!);
       final next = prev.copyWith(tasks: tasks, busy: false);
       emit(next);
@@ -283,6 +272,40 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     }
   }
 
+  Future<void> _onPatch(
+    TasksPatchRequested event,
+    Emitter<TasksState> emit,
+  ) async {
+    final prev = _ready;
+    if (_groupId == null || prev == null) return;
+    if (event.title == null &&
+        event.description == null &&
+        event.status == null) {
+      return;
+    }
+    if (event.title != null && event.title!.trim().isEmpty) {
+      emit(TasksFailure('Tiêu đề không được trống', previous: prev));
+      emit(prev);
+      return;
+    }
+    emit(prev.copyWith(busy: true));
+    try {
+      await _core.patchTask(
+        _groupId!,
+        event.code,
+        title: event.title?.trim(),
+        description: event.description,
+        status: event.status,
+      );
+      final tasks = await _core.listTasks(_groupId!);
+      final next = prev.copyWith(tasks: tasks, busy: false);
+      emit(next);
+    } catch (e) {
+      emit(TasksFailure(_msg(e), previous: prev));
+      emit(prev.copyWith(busy: false));
+    }
+  }
+
   Future<void> _onClaim(
     TasksClaimRequested event,
     Emitter<TasksState> emit,
@@ -295,6 +318,35 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
       final tasks = await _core.listTasks(_groupId!);
       final next = prev.copyWith(tasks: tasks, busy: false);
       emit(TasksActionSuccess('Đã nhận việc', ready: next));
+      emit(next);
+    } catch (e) {
+      emit(TasksFailure(_msg(e), previous: prev));
+      emit(prev.copyWith(busy: false));
+    }
+  }
+
+  static const deleteSuccessMessage = 'Đã xóa công việc';
+
+  Future<void> _onDelete(
+    TasksDeleteRequested event,
+    Emitter<TasksState> emit,
+  ) async {
+    final prev = _ready;
+    if (_groupId == null || prev == null) return;
+    final deleted = prev.tasks.where((t) => t.code == event.code).toList();
+    emit(prev.copyWith(busy: true));
+    try {
+      await _core.deleteTask(_groupId!, event.code);
+      final tasks = await _core.listTasks(_groupId!);
+      final removedIds = deleted.map((t) => t.id).toSet();
+      final clearFocus =
+          prev.focusTaskId != null && removedIds.contains(prev.focusTaskId);
+      final next = prev.copyWith(
+        tasks: tasks,
+        busy: false,
+        clearFocus: clearFocus,
+      );
+      emit(TasksActionSuccess(deleteSuccessMessage, ready: next));
       emit(next);
     } catch (e) {
       emit(TasksFailure(_msg(e), previous: prev));

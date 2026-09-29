@@ -186,7 +186,7 @@ export async function ingestGoogleChatMessage(input: IngestGoogleChatInput) {
       },
     });
   } else if (!space.chatIngestEnabled) {
-    throw new AppError("Ingest disabled for space", "INGEST_DISABLED", 403);
+    throw new AppError("Đồng bộ chat đã tắt cho không gian này", "INGEST_DISABLED", 403);
   }
 
   const clientMsgId = createHash("sha256")
@@ -210,11 +210,11 @@ export async function ingestGoogleChatMessage(input: IngestGoogleChatInput) {
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new AppError(`chat ingest failed: ${text}`, "CHAT_INGEST_FAILED", 502);
+    throw new AppError(`Đồng bộ chat thất bại: ${text}`, "CHAT_INGEST_FAILED", 502);
   }
   const payload = (await res.json()) as { message?: { id?: string }; deduped?: boolean };
   const messageId = payload.message?.id;
-  if (!messageId) throw new AppError("chat ingest missing message id", "CHAT_INGEST_FAILED", 502);
+  if (!messageId) throw new AppError("Thiếu id tin nhắn khi đồng bộ chat", "CHAT_INGEST_FAILED", 502);
 
   await prismaWrite.googleMessageMap.create({
     data: {

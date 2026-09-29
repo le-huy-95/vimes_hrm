@@ -8,22 +8,27 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "DATABASE_URL=${DATABASE_URL:-postgresql://mt:mt@localhost:15432/manage_teams} prisma generate && tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests",
     "lint": "echo \"no lint yet\"",
-    "migrate": "tsx src/migrate.ts"
+    "migrate": "tsx src/migrate.ts",
+    "prisma:generate": "DATABASE_URL=${DATABASE_URL:-postgresql://mt:mt@localhost:15432/manage_teams} prisma generate",
+    "prisma:pull": "DATABASE_URL=${DATABASE_URL:-${POSTGRES_URL:-postgresql://mt:mt@localhost:15432/manage_teams}} prisma db pull"
   },
   "dependencies": {
+    "@prisma/client": "^6.5.0",
     "pg": "^8.13.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "@types/pg": "^8.11.10",
+    "prisma": "^6.5.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"

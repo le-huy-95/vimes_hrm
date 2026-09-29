@@ -43,7 +43,7 @@ export async function webhook(req: Request, res: Response): Promise<void> {
 
     const parsed = parseGoogleChatWebhook(req.body);
     if (!parsed) {
-      throw new AppError("Invalid Google Chat payload", "VALIDATION", 400);
+      throw new AppError("Payload Google Chat không hợp lệ", "VALIDATION", 400);
     }
 
     // Map user từ email/name — production cần directory lookup; stub lấy từ parameters

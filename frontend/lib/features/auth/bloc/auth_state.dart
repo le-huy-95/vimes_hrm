@@ -21,8 +21,10 @@ class AuthAuthenticated extends AuthState {
 
   final AuthUser user;
 
+  bool get needsGoogleLink => !user.hasGoogleLinked;
+
   @override
-  List<Object?> get props => [user.id, user.email];
+  List<Object?> get props => [user.id, user.email, user.googleAccounts.length];
 }
 
 class AuthLoading extends AuthState {

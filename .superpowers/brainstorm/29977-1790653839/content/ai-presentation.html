@@ -1,0 +1,84 @@
+<h2>Bấm FAB ✦ thì AI mở thế nào?</h2>
+<p class="subtitle">Đã chốt: FAB trên mọi tab · Chọn cách trình bày màn chat</p>
+
+<div class="cards">
+  <div class="card" data-choice="fullscreen" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup" style="margin:0;border:none;box-shadow:none">
+        <div class="mockup-body" style="padding:12px;background:#f7faf9">
+          <div style="background:#fff;border:1px solid #d0d5dd;border-radius:8px;overflow:hidden">
+            <div class="mock-nav" style="font-size:11px;padding:8px 10px;display:flex;justify-content:space-between">
+              <span>← Trợ lý AI</span>
+              <span style="color:#0e7c86">Chat mới</span>
+            </div>
+            <div style="padding:12px;min-height:110px">
+              <div style="align-self:flex-end;background:#0e7c86;color:#fff;border-radius:12px 12px 4px 12px;padding:8px 10px;font-size:11px;margin-left:40%;margin-bottom:8px">Việc đang mở?</div>
+              <div style="background:#e4f2f1;border-radius:12px 12px 12px 4px;padding:8px 10px;font-size:11px;margin-right:20%">2 việc đang mở…</div>
+              <div style="margin-top:6px;font-size:10px;color:#0e7c86">🔗 T-1: Open A</div>
+            </div>
+            <div style="padding:8px;border-top:1px solid #e4e7ec;display:flex;gap:6px">
+              <div class="mock-input" style="flex:1;margin:0;font-size:11px;padding:6px">Hỏi AI…</div>
+              <button class="mock-button" style="padding:6px 10px;font-size:11px">Gửi</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Full-screen</h3>
+      <p>Push route `/ai`, back về tab trước. Nhiều chỗ cho bubble + links.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="sheet" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup" style="margin:0;border:none;box-shadow:none">
+        <div class="mockup-body" style="padding:12px;background:#f7faf9">
+          <div style="background:#fff;border:1px solid #d0d5dd;border-radius:8px;overflow:hidden;position:relative;min-height:180px">
+            <div class="mock-nav" style="font-size:11px;padding:8px 10px;opacity:0.4">Vimes · Tasks</div>
+            <div class="placeholder" style="margin:8px 12px;height:36px;opacity:0.35;font-size:10px">Kanban mờ phía sau</div>
+            <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #d0d5dd;border-radius:12px 12px 0 0;padding:10px;box-shadow:0 -4px 16px rgba(0,0,0,.08)">
+              <div style="width:36px;height:4px;background:#d0d5dd;border-radius:2px;margin:0 auto 8px"></div>
+              <div style="font-size:12px;font-weight:700;color:#132b2e;margin-bottom:6px">Trợ lý AI</div>
+              <div style="background:#e4f2f1;border-radius:8px;padding:8px;font-size:11px;margin-bottom:8px">2 việc đang mở…</div>
+              <div style="display:flex;gap:6px">
+                <div class="mock-input" style="flex:1;margin:0;font-size:10px;padding:5px">Hỏi…</div>
+                <button class="mock-button" style="padding:5px 8px;font-size:10px">Gửi</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Bottom sheet</h3>
+      <p>~70–90% chiều cao, tab vẫn ở dưới. Nhanh đóng; hẹp hơn cho links.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="responsive" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup" style="margin:0;border:none;box-shadow:none">
+        <div class="mockup-body" style="padding:12px;background:#f7faf9">
+          <div style="display:flex;gap:8px;align-items:stretch">
+            <div style="flex:1;background:#fff;border:1px solid #d0d5dd;border-radius:8px;overflow:hidden;font-size:9px">
+              <div style="padding:6px;border-bottom:1px solid #e4e7ec;font-weight:600">Mobile: full</div>
+              <div style="padding:8px;color:#5c7478">Push `/ai`</div>
+            </div>
+            <div style="flex:1.4;background:#fff;border:1px solid #d0d5dd;border-radius:8px;overflow:hidden;display:flex;font-size:9px;min-height:100px">
+              <div style="flex:1;padding:6px;opacity:0.5;border-right:1px solid #e4e7ec">Tasks</div>
+              <div style="width:42%;padding:6px;background:#e4f2f1">
+                <div style="font-weight:700;margin-bottom:4px">AI panel</div>
+                <div style="font-size:8px;color:#5c7478">Side drawer ≥900px</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Responsive</h3>
+      <p>Mobile = full-screen; Web rộng = panel bên phải. Phức tạp hơn một chút.</p>
+    </div>
+  </div>
+</div>

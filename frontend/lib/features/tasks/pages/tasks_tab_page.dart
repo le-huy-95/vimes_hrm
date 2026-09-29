@@ -6,6 +6,9 @@ import 'package:manage_teams/features/home/data/core_repository.dart';
 import 'package:manage_teams/features/tasks/bloc/tasks_bloc.dart';
 import 'package:manage_teams/features/tasks/bloc/tasks_event.dart';
 import 'package:manage_teams/features/tasks/bloc/tasks_state.dart';
+import 'package:manage_teams/features/tasks/board_task_display.dart';
+import 'package:manage_teams/features/tasks/task_tree.dart';
+import 'package:manage_teams/features/tasks/widgets/task_detail_dialog.dart';
 import 'package:manage_teams/features/workspace/bloc/workspace_bloc.dart';
 import 'package:manage_teams/features/workspace/bloc/workspace_state.dart';
 import 'package:manage_teams/shared/snackbar/simple_snackbar_service.dart';
@@ -69,28 +72,29 @@ class TasksTabPage extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(12),
-              child: Wrap(
-                spacing: 8,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Row(
                 children: [
-                  _chip(
-                    'Board',
-                    ready?.view == TasksViewMode.board,
-                    () => context.read<TasksBloc>().add(
+                  _ViewTab(
+                    label: 'Board',
+                    selected: ready?.view == TasksViewMode.board,
+                    onTap: () => context.read<TasksBloc>().add(
                       const TasksViewChanged(TasksViewMode.board),
                     ),
                   ),
-                  _chip(
-                    'List',
-                    ready?.view == TasksViewMode.list,
-                    () => context.read<TasksBloc>().add(
+                  const SizedBox(width: 20),
+                  _ViewTab(
+                    label: 'List',
+                    selected: ready?.view == TasksViewMode.list,
+                    onTap: () => context.read<TasksBloc>().add(
                       const TasksViewChanged(TasksViewMode.list),
                     ),
                   ),
-                  _chip(
-                    'Lịch',
-                    ready?.view == TasksViewMode.calendar,
-                    () => context.read<TasksBloc>().add(
+                  const SizedBox(width: 20),
+                  _ViewTab(
+                    label: 'Lịch',
+                    selected: ready?.view == TasksViewMode.calendar,
+                    onTap: () => context.read<TasksBloc>().add(
                       const TasksViewChanged(TasksViewMode.calendar),
                     ),
                   ),
@@ -140,19 +144,6 @@ class TasksTabPage extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-
-  Widget _chip(String label, bool selected, VoidCallback onTap) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) => onTap(),
-      selectedColor: ColorSkin.primary,
-      labelStyle: TextStyle(
-        color: selected ? Colors.white : ColorSkin.title,
-        fontWeight: FontWeight.w600,
-      ),
     );
   }
 
@@ -281,12 +272,14 @@ class _BoardView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const cols = ['TODO', 'IN_PROGRESS', 'DONE'];
+    final roots = tasks.roots;
     return LayoutBuilder(
       builder: (context, c) {
         final scroll = c.maxWidth < 720;
         Widget column(String status) => _Column(
           status: status,
-          tasks: tasks.where((t) => t.status == status).toList(),
+          tasks: roots.where((t) => t.status == status).toList(),
+          allTasks: tasks,
           onDrop: onDrop,
           focusTaskId: focusTaskId,
         );
@@ -325,11 +318,13 @@ class _Column extends StatelessWidget {
   const _Column({
     required this.status,
     required this.tasks,
+    required this.allTasks,
     required this.onDrop,
     this.focusTaskId,
   });
   final String status;
   final List<TaskListItem> tasks;
+  final List<TaskListItem> allTasks;
   final void Function(TaskListItem, String) onDrop;
   final String? focusTaskId;
 
@@ -341,78 +336,193 @@ class _Column extends StatelessWidget {
     };
   }
 
+  String get _label {
+    return switch (status) {
+      'IN_PROGRESS' => 'Đang làm',
+      'DONE' => 'Hoàn thành',
+      _ => 'Todo',
+    };
+  }
+
+  String get _emptyHint {
+    return switch (status) {
+      'IN_PROGRESS' => 'Kéo thẻ vào đây để bắt đầu làm việc',
+      'DONE' => 'Kéo thẻ vào đây khi công việc hoàn tất',
+      _ => 'Kéo thẻ vào đây',
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
-    return DragTarget<TaskListItem>(
-      onWillAcceptWithDetails: (_) => true,
-      onAcceptWithDetails: (d) => onDrop(d.data, status),
-      builder: (context, candidate, _) {
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: candidate.isNotEmpty
-                ? ColorSkin.primary.withValues(alpha: 0.12)
-                : _bg,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: _bg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
             children: [
-              Text(
-                '$status · ${tasks.length}',
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 8),
               Expanded(
-                child: ListView(
-                  children: [
-                    for (final t in tasks)
-                      LongPressDraggable<TaskListItem>(
-                        data: t,
-                        feedback: Material(
-                          elevation: 4,
-                          borderRadius: BorderRadius.circular(10),
-                          child: SizedBox(
-                            width: 220,
-                            child: _TaskCard(
-                              task: t,
-                              highlighted: t.id == focusTaskId,
-                            ),
-                          ),
-                        ),
-                        childWhenDragging: Opacity(
-                          opacity: 0.4,
-                          child: _TaskCard(
-                            task: t,
-                            highlighted: t.id == focusTaskId,
-                          ),
-                        ),
-                        child: _TaskCard(
-                          task: t,
-                          highlighted: t.id == focusTaskId,
-                        ),
-                      ),
-                  ],
+                child: Text(
+                  '$_label · ${tasks.length}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: ColorSkin.title,
+                  ),
                 ),
+              ),
+              const Icon(
+                Icons.more_horiz,
+                size: 18,
+                color: ColorSkin.subtitle,
               ),
             ],
           ),
-        );
-      },
+          const SizedBox(height: 8),
+          Expanded(
+            child: DragTarget<TaskListItem>(
+              onWillAcceptWithDetails: (d) => d.data.status != status,
+              onAcceptWithDetails: (d) => onDrop(d.data, status),
+              builder: (context, candidate, _) {
+                return ColoredBox(
+                  // Always painted so empty column space is hit-testable for drops.
+                  color: candidate.isNotEmpty
+                      ? ColorSkin.primary.withValues(alpha: 0.12)
+                      : const Color(0x00000000),
+                  child: ListView(
+                    children: [
+                      if (tasks.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _DashedRRect(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 16,
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  status == 'DONE'
+                                      ? Icons.check_circle_outline
+                                      : Icons.south,
+                                  size: 18,
+                                  color: ColorSkin.subtitle,
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _emptyHint,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: ColorSkin.subtitle,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        ),
+                      for (final t in tasks)
+                        _DraggableTaskCard(
+                          task: t,
+                          children: allTasks.childrenOf(t.id),
+                          highlighted: t.id == focusTaskId,
+                        ),
+                      // Keep a droppable floor under the last card / empty column.
+                      const SizedBox(height: 120),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Immediate drag (mouse/web). Horizontal affinity so column ListView can still scroll.
+class _DraggableTaskCard extends StatelessWidget {
+  const _DraggableTaskCard({
+    required this.task,
+    this.children = const [],
+    this.highlighted = false,
+  });
+
+  final TaskListItem task;
+  final List<TaskListItem> children;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final card = _TaskCard(
+      task: task,
+      children: children,
+      highlighted: highlighted,
+    );
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Draggable<TaskListItem>(
+            data: task,
+            affinity: Axis.horizontal,
+            maxSimultaneousDrags: 1,
+            feedback: Material(
+              elevation: 6,
+              borderRadius: BorderRadius.circular(10),
+              child: SizedBox(width: 220, child: card),
+            ),
+            childWhenDragging: Opacity(opacity: 0.35, child: card),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.grab,
+              child: card,
+            ),
+          ),
+        ),
+        IconButton(
+          tooltip: 'Chi tiết',
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          icon: const Icon(Icons.edit_outlined, size: 18),
+          onPressed: () => showTaskDetailDialog(context, task),
+        ),
+      ],
     );
   }
 }
 
 class _TaskCard extends StatelessWidget {
-  const _TaskCard({required this.task, this.highlighted = false});
+  const _TaskCard({
+    required this.task,
+    this.children = const [],
+    this.highlighted = false,
+  });
   final TaskListItem task;
+  final List<TaskListItem> children;
   final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
+    final assignee = task.assignees.isEmpty ? null : task.assignees.first;
+    final assigneeName = assignee == null
+        ? 'Chưa gán'
+        : (assignee.displayName?.trim().isNotEmpty == true
+            ? assignee.displayName!.trim()
+            : assignee.email);
+    final dueLabel = formatBoardDueLabel(task.dueDate);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
+      color: ColorSkin.white,
+      elevation: 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: highlighted
@@ -420,40 +530,144 @@ class _TaskCard extends StatelessWidget {
             : BorderSide.none,
       ),
       child: Padding(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              task.code,
-              style: const TextStyle(
-                color: ColorSkin.primary,
-                fontWeight: FontWeight.w700,
-                fontSize: 11,
-              ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: ColorSkin.tealLight,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    task.code,
+                    style: const TextStyle(
+                      color: ColorSkin.primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                _StatusGlyph(status: task.status),
+              ],
             ),
+            const SizedBox(height: 8),
             Text(
               task.title,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            if (task.dueDate != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                'Hạn: ${task.dueDate}',
-                style: const TextStyle(fontSize: 11, color: ColorSkin.title),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+                color: ColorSkin.title,
               ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 10,
+                  backgroundColor: assignee == null
+                      ? ColorSkin.grey3
+                      : ColorSkin.primary,
+                  child: Text(
+                    assigneeInitials(assigneeName),
+                    style: const TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w700,
+                      color: ColorSkin.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    assigneeName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: ColorSkin.subtitle,
+                    ),
+                  ),
+                ),
+                if (dueLabel != null) ...[
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.calendar_today_outlined,
+                    size: 12,
+                    color: ColorSkin.subtitle,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    dueLabel,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: ColorSkin.subtitle,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            if (children.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              const Divider(height: 1),
+              for (final c in children) _SubtaskMiniRow(task: c),
             ],
-            if (task.assignees.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                task.assignees
-                    .map((a) => a.displayName ?? a.email)
-                    .join(', '),
-                style: const TextStyle(fontSize: 11, color: Colors.black54),
-                maxLines: 1,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SubtaskMiniRow extends StatelessWidget {
+  const _SubtaskMiniRow({required this.task});
+  final TaskListItem task;
+
+  @override
+  Widget build(BuildContext context) {
+    final done = task.status == 'DONE';
+    return InkWell(
+      onTap: () => showTaskDetailDialog(context, task),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 28,
+              height: 28,
+              child: Checkbox(
+                value: done,
+                onChanged: (v) {
+                  context.read<TasksBloc>().add(
+                    TasksPatchRequested(
+                      code: task.code,
+                      status: v == true ? 'DONE' : 'TODO',
+                    ),
+                  );
+                },
+              ),
+            ),
+            Expanded(
+              child: Text(
+                task.title,
+                style: TextStyle(
+                  fontSize: 12,
+                  decoration: done ? TextDecoration.lineThrough : null,
+                  color: done ? Colors.black45 : Colors.black87,
+                ),
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-            ],
+            ),
           ],
         ),
       ),
@@ -479,6 +693,9 @@ class _ListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final rows = filter == null
+        ? tasks.nestedForList
+        : tasks.where((t) => t.status == filter).toList();
     return Column(
       children: [
         Padding(
@@ -503,12 +720,16 @@ class _ListView extends StatelessWidget {
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.all(12),
-            itemCount: tasks.length,
+            itemCount: rows.length,
             itemBuilder: (context, i) {
-              final t = tasks[i];
+              final t = rows[i];
+              final isChild = filter == null && !t.isRoot;
               final focused = t.id == focusTaskId;
               return Card(
-                margin: const EdgeInsets.only(bottom: 8),
+                margin: EdgeInsets.only(
+                  bottom: 8,
+                  left: isChild ? 20 : 0,
+                ),
                 color: focused ? ColorSkin.tealLight : null,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -516,43 +737,64 @@ class _ListView extends StatelessWidget {
                       ? const BorderSide(color: ColorSkin.primary, width: 2)
                       : BorderSide.none,
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '${t.code} — ${t.title}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () => showTaskDetailDialog(context, t),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            if (isChild)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: Checkbox(
+                                  value: t.status == 'DONE',
+                                  onChanged: (v) {
+                                    context.read<TasksBloc>().add(
+                                      TasksPatchRequested(
+                                        code: t.code,
+                                        status: v == true ? 'DONE' : 'TODO',
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            Expanded(
+                              child: Text(
+                                isChild
+                                    ? t.title
+                                    : '${t.code} — ${t.title}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
-                          ),
-                          Text(
-                            t.status,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Colors.black54,
+                            Text(
+                              t.status,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        _DueChips(task: t),
+                        const SizedBox(height: 6),
+                        _AssigneeRow(task: t, onClaim: onClaim),
+                        if (t.status == 'IN_PROGRESS')
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () => onComplete(t),
+                              child: const Text('Hoàn thành'),
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      _DueChips(task: t),
-                      const SizedBox(height: 6),
-                      _AssigneeRow(task: t, onClaim: onClaim),
-                      if (t.status == 'IN_PROGRESS')
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () => onComplete(t),
-                            child: const Text('Hoàn thành'),
-                          ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -688,7 +930,7 @@ class _AssigneeRow extends StatelessWidget {
     final candidates =
         detail.members.where((m) => !assigned.contains(m.userId)).toList();
     if (candidates.isEmpty) {
-      SimpleSnackbarService.showError('Không còn member để gán');
+      SimpleSnackbarService.showError('Không còn thành viên để gán');
       return;
     }
     final selected = await showDialog<List<String>>(
@@ -834,6 +1076,7 @@ class _CalendarView extends StatelessWidget {
                 ListTile(
                   title: Text('${t.code} — ${t.title}'),
                   subtitle: Text('Hạn: ${t.dueDate} · ${t.status}'),
+                  onTap: () => showTaskDetailDialog(context, t),
                 ),
             ],
           ),
@@ -841,4 +1084,123 @@ class _CalendarView extends StatelessWidget {
       ],
     );
   }
+}
+
+class _ViewTab extends StatelessWidget {
+  const _ViewTab({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: Container(
+        padding: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: selected ? ColorSkin.primary : Colors.transparent,
+              width: 2,
+            ),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+            color: selected ? ColorSkin.primary : ColorSkin.subtitle,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusGlyph extends StatelessWidget {
+  const _StatusGlyph({required this.status});
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (status) {
+      'DONE' => const Icon(
+          Icons.check_circle,
+          size: 18,
+          color: ColorSkin.primary,
+        ),
+      'IN_PROGRESS' => Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: ColorSkin.secondary1, width: 2),
+          ),
+        ),
+      _ => Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: ColorSkin.subtitle, width: 2),
+          ),
+        ),
+    };
+  }
+}
+
+class _DashedRRect extends StatelessWidget {
+  const _DashedRRect({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _DashedRRectPainter(
+        color: ColorSkin.border1,
+        radius: 10,
+      ),
+      child: child,
+    );
+  }
+}
+
+class _DashedRRectPainter extends CustomPainter {
+  _DashedRRectPainter({required this.color, required this.radius});
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      Radius.circular(radius),
+    );
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    final path = Path()..addRRect(r);
+    for (final metric in path.computeMetrics()) {
+      var dist = 0.0;
+      const dash = 5.0;
+      const gap = 4.0;
+      while (dist < metric.length) {
+        final next = (dist + dash).clamp(0, metric.length);
+        canvas.drawPath(metric.extractPath(dist, next.toDouble()), paint);
+        dist += dash + gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedRRectPainter old) =>
+      old.color != color || old.radius != radius;
 }

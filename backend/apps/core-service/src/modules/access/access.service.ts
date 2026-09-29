@@ -7,7 +7,7 @@ export async function requireOrgAdmin(orgId: string, userId: string): Promise<vo
     where: { organizationId_userId: { organizationId: orgId, userId } },
   });
   if (member?.role !== "OWNER" && member?.role !== "ADMIN") {
-    throw new AppError("Forbidden", "FORBIDDEN", 403);
+    throw new AppError("Không có quyền", "FORBIDDEN", 403);
   }
 }
 
@@ -16,7 +16,7 @@ export async function requireOrgMember(orgId: string, userId: string): Promise<v
   const member = await prismaRead.orgMember.findUnique({
     where: { organizationId_userId: { organizationId: orgId, userId } },
   });
-  if (!member) throw new AppError("Forbidden", "FORBIDDEN", 403);
+  if (!member) throw new AppError("Không có quyền", "FORBIDDEN", 403);
 }
 
 /** Bắt buộc user ACTIVE trong group; trả role. */
@@ -25,7 +25,7 @@ export async function requireGroupMember(groupId: string, userId: string): Promi
     where: { groupId_userId: { groupId, userId } },
   });
   if (!member || member.status !== "ACTIVE") {
-    throw new AppError("Forbidden", "FORBIDDEN", 403);
+    throw new AppError("Không có quyền", "FORBIDDEN", 403);
   }
   return { role: member.role };
 }
@@ -34,6 +34,6 @@ export async function requireGroupMember(groupId: string, userId: string): Promi
 export async function requireGroupAdmin(groupId: string, userId: string): Promise<void> {
   const { role } = await requireGroupMember(groupId, userId);
   if (role !== "OWNER" && role !== "ADMIN") {
-    throw new AppError("Forbidden", "FORBIDDEN", 403);
+    throw new AppError("Không có quyền", "FORBIDDEN", 403);
   }
 }

@@ -10,6 +10,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLoginRequested>(_onLogin);
     on<AuthGoogleLoginRequested>(_onGoogleLogin);
     on<AuthLogoutRequested>(_onLogout);
+    on<AuthSessionRefreshRequested>(_onSessionRefresh);
+    on<AuthGoogleLinked>(_onGoogleLinked);
   }
 
   final AuthRepository _repo;
@@ -48,6 +50,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final user = await _repo.loginWithGoogleIdToken(
         event.idToken,
         serverAuthCode: event.serverAuthCode,
+        redirectUri: event.redirectUri,
       );
       emit(AuthAuthenticated(user));
     } catch (e) {
@@ -61,6 +64,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     await _repo.logout();
     emit(const AuthUnauthenticated());
+  }
+
+  Future<void> _onSessionRefresh(
+    AuthSessionRefreshRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    try {
+      final user = await _repo.fetchMe();
+      emit(AuthAuthenticated(user));
+    } catch (e) {
+      // Keep current session on soft refresh failure.
+    }
+  }
+
+  void _onGoogleLinked(
+    AuthGoogleLinked event,
+    Emitter<AuthState> emit,
+  ) {
+    emit(AuthAuthenticated(event.user));
   }
 
   AuthFailure _mapError(Object error, {String? email}) {

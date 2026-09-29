@@ -9,6 +9,7 @@ import {
 import { z } from "zod";
 import {
   enqueueTaskPush,
+  enqueueTaskDeletesForAppTask,
   enqueueTaskPull,
   enqueueSheetsJob,
   enqueueFullSync,
@@ -60,7 +61,7 @@ const SheetsSchema = z.object({
 
 function requireInternal(req: Request): void {
   if (req.header("x-internal-token") !== internalToken) {
-    throw new AppError("Unauthorized", "UNAUTHORIZED", 401);
+    throw new AppError("Chưa xác thực", "UNAUTHORIZED", 401);
   }
 }
 
@@ -70,6 +71,21 @@ export async function enqueueTask(req: Request, res: Response): Promise<void> {
     requireInternal(req);
     const body = EnqueueSchema.parse(req.body);
     res.status(202).json(await enqueueTaskPush(body));
+  } catch (err) {
+    sendError(res, err, logger);
+  }
+}
+
+const DeleteTaskSchema = z.object({
+  taskId: z.string().uuid(),
+});
+
+/** POST /internal/sync/tasks/delete — app đã soft-delete task. */
+export async function enqueueTaskDeleteInternal(req: Request, res: Response): Promise<void> {
+  try {
+    requireInternal(req);
+    const body = DeleteTaskSchema.parse(req.body);
+    res.status(202).json(await enqueueTaskDeletesForAppTask(body.taskId));
   } catch (err) {
     sendError(res, err, logger);
   }

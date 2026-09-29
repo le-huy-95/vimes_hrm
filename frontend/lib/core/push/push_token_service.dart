@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -20,13 +18,11 @@ class PushTokenService {
 
   String get _platform {
     if (kIsWeb) return 'web';
-    try {
-      if (Platform.isIOS) return 'ios';
-      if (Platform.isAndroid) return 'android';
-    } catch (_) {
-      // Platform not available
-    }
-    return 'fcm';
+    return switch (defaultTargetPlatform) {
+      TargetPlatform.iOS => 'ios',
+      TargetPlatform.android => 'android',
+      _ => 'fcm',
+    };
   }
 
   /// Gọi sau khi user authenticated. Không throw ra UI.

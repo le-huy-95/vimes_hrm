@@ -18,7 +18,7 @@
     "lint": "echo \"no lint yet\""
   },
   "dependencies": {
-    "@manage-teams/common": "workspace:*",
+    "@manage-teams/lib": "workspace:*",
     "@manage-teams/contracts": "workspace:*",
     "kafkajs": "^2.2.4"
   },

@@ -386,17 +386,17 @@ export async function handleDriveWebhook(input: {
     where: { channelId: input.channelId },
   });
   if (!ch || ch.status !== "ACTIVE") {
-    throw new AppError("Unknown channel", "NOT_FOUND", 404);
+    throw new AppError("Không tìm thấy kênh", "NOT_FOUND", 404);
   }
   if (input.token && input.token !== ch.token) {
-    throw new AppError("Invalid channel token", "UNAUTHORIZED", 401);
+    throw new AppError("Token kênh không hợp lệ", "UNAUTHORIZED", 401);
   }
   if (ch.expiresAt < new Date()) {
     await prismaWrite.driveWatchChannel.update({
       where: { id: ch.id },
       data: { status: "EXPIRED" },
     });
-    throw new AppError("Channel expired", "GONE", 410);
+    throw new AppError("Kênh đã hết hạn", "GONE", 410);
   }
   if (input.resourceState === "sync") {
     return { ok: true, sync: true };

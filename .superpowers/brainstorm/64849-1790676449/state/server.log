@@ -1,0 +1,6 @@
+{"type":"server-started","port":53910,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:53910","screen_dir":"/Users/huy/Documents/code/manage-teams/.superpowers/brainstorm/64849-1790676449/content","state_dir":"/Users/huy/Documents/code/manage-teams/.superpowers/brainstorm/64849-1790676449/state"}
+fs.watch error: EMFILE: too many open files, watch
+{"source":"user-event","type":"click","text":"A\n    \n      FAB (+) như ảnh (khuyến nghị)\n      Bỏ nút “+ Tạo task” trên header khi đang xem Board. FloatingActionButton góc phải, màu ColorSkin.primary. List/Lịch giữ nút header.","choice":"fab-only","id":null,"timestamp":1790676507174}
+{"source":"user-event","type":"click","text":"A\n    \n      FAB (+) như ảnh (khuyến nghị)\n      Bỏ nút “+ Tạo task” trên header khi đang xem Board. FloatingActionButton góc phải, màu ColorSkin.primary. List/Lịch giữ nút header.","choice":"fab-only","id":null,"timestamp":1790676507760}
+{"type":"server-stopped","reason":"owner process exited"}
+{"source":"user-event","type":"click","text":"A\n    \n      FAB (+) như ảnh (khuyến nghị)\n      Bỏ nút “+ Tạo task” trên header khi đang xem Board. FloatingActionButton góc phải, màu ColorSkin.primary. List/Lịch giữ nút header.","choice":"fab-only","id":null,"timestamp":1790676514998}

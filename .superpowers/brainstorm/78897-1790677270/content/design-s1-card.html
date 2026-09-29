@@ -1,0 +1,61 @@
+<h2>Design §1 — Task card</h2>
+<p class="subtitle">Màu ColorSkin (primary #0E7C86, title, subtitle, grey). Không copy teal/beige/mint của ảnh mock.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Preview: board task card</div>
+  <div class="mockup-body" style="background:#F5F7F7;padding:16px;">
+    <div style="background:#fff;border-radius:12px;padding:12px;box-shadow:0 1px 3px rgba(19,43,46,.08);max-width:260px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:11px;font-weight:700;color:#0E7C86;background:#E4F2F1;padding:2px 8px;border-radius:6px;">NHM-5</span>
+        <span style="width:18px;height:18px;border-radius:50%;border:2px solid #5C7478;display:inline-block;"></span>
+      </div>
+      <div style="font-weight:700;color:#132B2E;font-size:14px;margin-bottom:10px;">task 2</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:11px;color:#5C7478;">
+        <span style="display:inline-flex;align-items:center;gap:4px;">
+          <span style="width:20px;height:20px;border-radius:50%;background:#0E7C86;color:#fff;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;">M</span>
+          Me
+        </span>
+        <span style="display:inline-flex;align-items:center;gap:3px;">📅 Hôm nay</span>
+      </div>
+    </div>
+    <div style="height:10px;"></div>
+    <div style="background:#fff;border-radius:12px;padding:12px;box-shadow:0 1px 3px rgba(19,43,46,.08);max-width:260px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:11px;font-weight:700;color:#0E7C86;background:#E4F2F1;padding:2px 8px;border-radius:6px;">NHM-4</span>
+        <span style="width:18px;height:18px;border-radius:50%;background:#0E7C86;color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;">✓</span>
+      </div>
+      <div style="font-weight:700;color:#132B2E;font-size:14px;margin-bottom:10px;">task 1</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:11px;color:#5C7478;">
+        <span style="display:inline-flex;align-items:center;gap:4px;">
+          <span style="width:20px;height:20px;border-radius:50%;background:#F5A028;color:#fff;font-size:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;">NA</span>
+          Nguyễn Văn A
+        </span>
+        <span style="display:inline-flex;align-items:center;gap:3px;">📅 12 thg 10</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p><strong>Layout:</strong> (1) badge <code>task.code</code> + status icon · (2) title bold · (3) footer: avatar initials + tên · calendar + due (ẩn nếu null; “Hôm nay” nếu hôm nay).</p>
+  <p><strong>Status icon:</strong> TODO vòng subtitle · IN_PROGRESS vòng secondary1 · DONE check primary.</p>
+  <p><strong>Assignee:</strong> người đầu tiên; nếu trống hiện “Chưa gán” + avatar placeholder grey.</p>
+  <p><strong>Không có:</strong> comment count.</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="approve-s1" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>OK §1</h3>
+      <p>Duyệt layout card — sang §2 cột + empty state.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="revise-s1" onclick="toggleSelect(this)">
+    <div class="letter">↺</div>
+    <div class="content">
+      <h3>Sửa §1</h3>
+      <p>Nói gì cần chỉnh (ví dụ luôn hiện due, multi-assignee…).</p>
+    </div>
+  </div>
+</div>

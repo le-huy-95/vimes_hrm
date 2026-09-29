@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:manage_teams/app/router/app_router.dart';
-import 'package:manage_teams/core/constants/env_config.dart';
 import 'package:manage_teams/core/skin/color_skin.dart';
 import 'package:manage_teams/core/skin/typo_skin.dart';
 import 'package:manage_teams/features/auth/bloc/auth_bloc.dart';
 import 'package:manage_teams/features/auth/bloc/auth_event.dart';
 import 'package:manage_teams/features/auth/bloc/auth_state.dart';
 import 'package:manage_teams/features/auth/data/auth_repository.dart';
+import 'package:manage_teams/features/auth/data/google_sign_in_helper.dart';
 import 'package:manage_teams/features/auth/widgets/auth_primary_button.dart';
 import 'package:manage_teams/features/auth/widgets/auth_responsive_layout.dart';
 import 'package:manage_teams/features/auth/widgets/auth_text_field.dart';
+import 'package:manage_teams/features/auth/widgets/google_auth_action.dart';
 import 'package:manage_teams/shared/snackbar/simple_snackbar_service.dart';
 
 class LoginPage extends StatefulWidget {
@@ -32,7 +31,6 @@ class _LoginPageState extends State<LoginPage> {
   bool _rememberMe = true;
   bool _obscurePassword = true;
   bool _shownInfo = false;
-  bool _googleBusy = false;
 
   @override
   void initState() {
@@ -66,50 +64,15 @@ class _LoginPageState extends State<LoginPage> {
         );
   }
 
-  Future<void> _loginWithGoogle() async {
-    if (_googleBusy) return;
-    setState(() => _googleBusy = true);
-    try {
-      const tasksScopes = <String>[
-        'https://www.googleapis.com/auth/tasks',
-        'https://www.googleapis.com/auth/spreadsheets',
-        'https://www.googleapis.com/auth/drive.file',
-      ];
-      final google = GoogleSignIn.instance;
-      await google.initialize(
-        serverClientId: EnvConfig.googleServerClientId.isEmpty
-            ? null
-            : EnvConfig.googleServerClientId,
-        clientId: EnvConfig.googleIosClientId.isEmpty
-            ? null
-            : EnvConfig.googleIosClientId,
-      );
-      final account = await google.authenticate(scopeHint: tasksScopes);
-      final idToken = account.authentication.idToken;
-      if (idToken == null || idToken.isEmpty) {
-        SimpleSnackbarService.showError('Không lấy được Google idToken');
-        return;
-      }
-      String? serverAuthCode;
-      try {
-        final serverAuth =
-            await account.authorizationClient.authorizeServer(tasksScopes);
-        serverAuthCode = serverAuth?.serverAuthCode;
-      } catch (_) {
-        // Đăng nhập vẫn tiếp tục; sync Tasks có thể chưa sẵn sàng
-      }
-      if (!mounted) return;
+  Future<void> _onGoogleTokens(GoogleSignInTokens tokens) async {
+    if (!mounted) return;
       context.read<AuthBloc>().add(
             AuthGoogleLoginRequested(
-              idToken: idToken,
-              serverAuthCode: serverAuthCode,
+              idToken: tokens.idToken,
+              serverAuthCode: tokens.serverAuthCode,
+              redirectUri: tokens.redirectUri,
             ),
           );
-    } catch (e) {
-      SimpleSnackbarService.showError(e.toString());
-    } finally {
-      if (mounted) setState(() => _googleBusy = false);
-    }
   }
 
   Future<void> _onAuthFailure(AuthFailure state) async {
@@ -148,7 +111,7 @@ class _LoginPageState extends State<LoginPage> {
           current is AuthUnauthenticated ||
           current is AuthAuthenticated,
       builder: (context, state) {
-        final busy = state is AuthLoading || _googleBusy;
+        final busy = state is AuthLoading;
         return AuthResponsiveLayout(
           showMobileLogo: true,
           form: Form(
@@ -228,15 +191,17 @@ class _LoginPageState extends State<LoginPage> {
                   label: busy ? 'Đang đăng nhập…' : 'Đăng nhập',
                   onPressed: busy ? null : _submit,
                 ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: busy ? null : _loginWithGoogle,
-                  icon: SvgPicture.asset(
-                    'lib/assets/svg/google_logo.svg',
-                    width: 18,
-                    height: 18,
-                  ),
-                  label: const Text('Đăng nhập với Google'),
+                const SizedBox(height: 16),
+                Text(
+                  'hoặc',
+                  textAlign: TextAlign.center,
+                  style: TypoSkin.caption.copyWith(color: ColorSkin.subtitle),
+                ),
+                const SizedBox(height: 16),
+                GoogleAuthAction(
+                  label: 'Đăng nhập với Google',
+                  enabled: !busy,
+                  onTokens: _onGoogleTokens,
                 ),
                 const SizedBox(height: 16),
                 TextButton(

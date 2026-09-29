@@ -58,6 +58,22 @@ export async function notifyGoogleTaskPush(body: {
   }
 }
 
+/** Enqueue xóa task trên Google Tasks sau khi app soft-delete (non-fatal). */
+export async function notifyGoogleTaskDelete(taskId: string): Promise<void> {
+  try {
+    await fetch(`${googleSyncUrl}/internal/sync/tasks/delete`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-internal-token": internalToken,
+      },
+      body: JSON.stringify({ taskId }),
+    });
+  } catch (err) {
+    logger.warn({ err, taskId }, "google sync delete notify failed (non-fatal)");
+  }
+}
+
 /** Enqueue kéo delta Google Tasks sau login (non-fatal). */
 export async function notifyGoogleTaskPull(userId: string, force = false): Promise<void> {
   try {

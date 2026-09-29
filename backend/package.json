@@ -1,17 +1,26 @@
 {
   "name": "manage-teams-backend",
   "private": true,
-  "packageManager": "pnpm@9.15.0",
+  "packageManager": "bun@1.3.9",
   "scripts": {
     "build": "turbo run build",
+    "postinstall": "turbo run build --filter=@manage-teams/lib --filter=@manage-teams/db --filter=@manage-teams/cache-keys --filter=@manage-teams/storage",
+    "build:deps": "turbo run build --filter=@manage-teams/lib --filter=@manage-teams/db --filter=@manage-teams/cache-keys --filter=@manage-teams/storage",
     "dev": "turbo run dev --parallel",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
-    "hello:event": "pnpm --filter @manage-teams/hello-producer exec tsx src/send-once.ts"
+    "backup:postgres": "bash scripts/backup-postgres.sh",
+    "security:env-check": "bash scripts/security-env-check.sh",
+    "test:e2e": "bun run scripts/e2e-phase1-3.ts"
   },
   "devDependencies": {
+    "socket.io-client": "^4.8.4",
     "turbo": "^2.3.3",
     "typescript": "^5.7.2"
-  }
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
 }

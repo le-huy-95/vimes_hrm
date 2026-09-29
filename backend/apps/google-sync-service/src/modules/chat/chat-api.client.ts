@@ -90,22 +90,14 @@ export async function leaveSpaceAsUser(userId: string, spaceName: string) {
   }
 
   const listed = await chat.spaces.members.list({ parent: spaceName, pageSize: 100 });
-  const self = (listed.data.memberships ?? []).find((m) => {
-    const state = (m.state ?? "").toUpperCase();
-    if (state && state !== "JOINED") return false;
-    const memberName = m.member?.name ?? m.name ?? "";
-    return memberName.includes("/users/me") || Boolean(m.member?.name);
-  });
-
-  // Prefer membership where member.name matches users/me pattern; else first human JOINED with name.
+  const memberships = listed.data.memberships ?? [];
   const candidate =
-    (listed.data.memberships ?? []).find((m) =>
-      (m.member?.name ?? "").endsWith("/users/me") || (m.name ?? "").includes("/members/users/me"),
+    memberships.find(
+      (m) =>
+        (m.name ?? "").includes("/members/users/me") ||
+        (m.member?.name ?? "").endsWith("/users/me"),
     ) ??
-    (listed.data.memberships ?? []).find(
-      (m) => (m.state ?? "JOINED").toUpperCase() === "JOINED" && m.name,
-    ) ??
-    self;
+    memberships.find((m) => (m.state ?? "JOINED").toUpperCase() === "JOINED" && m.name);
 
   const memberName = candidate?.name;
   if (!memberName) {

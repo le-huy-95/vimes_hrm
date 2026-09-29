@@ -77,11 +77,13 @@
       "name": "@manage-teams/core-service",
       "version": "0.0.1",
       "dependencies": {
+        "@manage-teams/cache-keys": "workspace:*",
         "@manage-teams/contracts": "workspace:*",
         "@manage-teams/db": "workspace:*",
         "@manage-teams/lib": "workspace:*",
         "express": "^4.21.2",
         "jose": "^5.9.6",
+        "redis": "^4.7.0",
         "zod": "^3.24.1",
       },
       "devDependencies": {

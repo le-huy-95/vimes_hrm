@@ -1,0 +1,40 @@
+<h2>Design §1 — Header layout</h2>
+<p class="subtitle">Logo + 2 nút (email / workspace) + logout. Tab Sync → Sheets. OK chứ?</p>
+
+<div class="mockup">
+  <div class="mockup-header">Desktop (≥900px)</div>
+  <div class="mockup-body" style="padding:0;font-family:system-ui;">
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid #e5e7eb;background:#fff;">
+      <div style="width:32px;height:32px;border-radius:8px;background:#0d9488;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;">V</div>
+      <div style="display:flex;gap:4px;font-size:13px;">
+        <span style="padding:6px 10px;color:#0d9488;font-weight:700;">Home</span>
+        <span style="padding:6px 10px;color:#64748b;">Tasks</span>
+        <span style="padding:6px 10px;color:#64748b;">Chat</span>
+        <span style="padding:6px 10px;color:#64748b;">Sheets</span>
+      </div>
+      <div style="flex:1;"></div>
+      <div style="border:1px solid #e2e8f0;border-radius:8px;padding:4px 10px;min-width:140px;">
+        <div style="font-size:12px;font-weight:600;color:#0f172a;">you@company.com ▾</div>
+        <div style="font-size:10px;color:#64748b;">Google primary</div>
+      </div>
+      <div style="border:1px solid #e2e8f0;border-radius:8px;padding:4px 10px;min-width:150px;">
+        <div style="font-size:12px;font-weight:600;color:#0f172a;">Acme · Design ▾</div>
+        <div style="font-size:10px;color:#64748b;">Tổ chức · Nhóm</div>
+      </div>
+      <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#64748b;border:1px solid #e2e8f0;">⎋</div>
+    </div>
+    <div style="padding:24px;color:#94a3b8;font-size:13px;min-height:80px;">Content…</div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:16px;">
+  <p><span class="label">Chi tiết</span></p>
+  <ul style="margin:8px 0 0 18px;line-height:1.6;color:var(--text-muted,#64748b);">
+    <li><strong>Logo</strong> thay chữ “Vimes” — dùng <code>AppLogo</code> / <code>vimes_logo.png</code> hiện có</li>
+    <li><strong>Nút Account</strong>: dòng 1 = email Google primary; dòng 2 = nhãn phụ (vd. “Google primary”)</li>
+    <li><strong>Nút Workspace</strong>: dòng 1 = <code>Org · Group</code>; dòng 2 = “Tổ chức · Nhóm”</li>
+    <li><strong>Logout</strong> giữ IconButton bên phải</li>
+    <li><strong>Tab label</strong>: Sync → <strong>Sheets</strong> (desktop + bottom nav)</li>
+    <li>Mobile: logo + 2 nút + logout trên AppBar; tabs ở bottom nav (label Sheets)</li>
+  </ul>
+</div>

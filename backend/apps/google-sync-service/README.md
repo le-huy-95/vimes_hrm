@@ -8,6 +8,7 @@ Chi tiết Phase 4–5: [docs/runbooks/phase-4-5-deepen.md](../../docs/runbooks/
 | Method | Path | Auth |
 |--------|------|------|
 | POST | `/internal/sync/tasks/push` | internal |
+| POST | `/internal/sync/tasks/delete` | internal |
 | POST | `/internal/sync/tasks/pull` | internal |
 | POST | `/internal/sync/reconcile` | internal |
 | POST | `/sync/tasks/pull` | JWT |

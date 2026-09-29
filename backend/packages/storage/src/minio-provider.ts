@@ -52,4 +52,21 @@ export class MinioStorageProvider implements StorageProvider {
   async getSignedGetUrl(key: string, expirySeconds: number): Promise<string> {
     return this.client.presignedGetObject(this.config.bucket, key, expirySeconds);
   }
+
+  async getSignedPutUrl(key: string, expirySeconds: number): Promise<string> {
+    return this.client.presignedPutObject(this.config.bucket, key, expirySeconds);
+  }
+
+  async removeObject(key: string): Promise<void> {
+    await this.client.removeObject(this.config.bucket, key);
+  }
+
+  async statObject(key: string): Promise<{ size: number; etag?: string } | null> {
+    try {
+      const s = await this.client.statObject(this.config.bucket, key);
+      return { size: s.size, etag: s.etag };
+    } catch {
+      return null;
+    }
+  }
 }

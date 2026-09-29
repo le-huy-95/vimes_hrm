@@ -1,5 +1,28 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "envMode": "loose",
+  "globalPassThroughEnv": [
+    "SMTP_*",
+    "DEFAULT_FROM_*",
+    "DATABASE_URL",
+    "POSTGRES_URL",
+    "REDIS_URL",
+    "JWT_SECRET",
+    "INTERNAL_SERVICE_TOKEN",
+    "CORS_ORIGINS",
+    "WORKER_URL",
+    "MESSAGING_URL",
+    "IDENTITY_URL",
+    "CORE_URL",
+    "CHAT_URL",
+    "AI_URL",
+    "GOOGLE_*",
+    "MINIO_*",
+    "KAFKA_*",
+    "NODE_ENV",
+    "LOG_LEVEL",
+    "PORT"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

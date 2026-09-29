@@ -1,0 +1,33 @@
+<h2>Design §2 — Flutter UI</h2>
+<p class="subtitle">Gắn vào Board/List hiện có — chưa làm bottom sheet kiểu Google đầy đủ</p>
+
+<div class="mockup">
+  <div class="mockup-header">Task card / list row</div>
+  <div class="mockup-body" style="font-family:system-ui;padding:12px">
+    <div style="border:1px solid #ddd;border-radius:10px;padding:10px;max-width:320px">
+      <div style="color:#1a73e8;font-size:11px;font-weight:700">GRP-12</div>
+      <div style="font-weight:600;margin:2px 0 8px">Viết báo cáo tuần</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <span style="border:1px solid #dadce0;border-radius:999px;padding:4px 10px;font-size:12px">Hôm nay</span>
+        <span style="border:1px solid #dadce0;border-radius:999px;padding:4px 10px;font-size:12px">Ngày mai</span>
+        <span style="border:1px solid #dadce0;border-radius:999px;padding:4px 10px;font-size:12px">📅</span>
+        <span style="background:#e8f0fe;color:#174ea6;border-radius:999px;padding:4px 10px;font-size:12px">29/09</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#5f6368">
+        <span style="width:22px;height:22px;border-radius:50%;background:#c2e7ff;display:inline-flex;align-items:center;justify-content:center">+</span>
+        <span>Chưa gán · Claim / Gán</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">Hành vi</div>
+  <ul>
+    <li><strong>Due chips:</strong> Hôm nay / Ngày mai / date picker / xóa hạn (nếu đã có)</li>
+    <li><strong>Pool:</strong> hiện “Chưa gán” + nút Claim (self) + Gán (mở multi-select member)</li>
+    <li><strong>Đã có assignees:</strong> avatar chips; tap “+” để thêm; long-press/menu để gỡ (nếu API unassign có — đợt này: chỉ thêm, gỡ = phase sau nếu chưa có)</li>
+    <li><strong>Tạo task:</strong> dialog chỉ title (+ optional due); không bắt buộc assignee</li>
+    <li><strong>Calendar view:</strong> nhóm task theo <code>dueDate</code> (task không due không hiện trên ngày)</li>
+  </ul>
+</div>

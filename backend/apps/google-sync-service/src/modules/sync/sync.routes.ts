@@ -9,6 +9,9 @@ export const syncRoutes: Router = Router();
 syncRoutes.post("/internal/sync/tasks/push", (req, res) =>
   void syncController.enqueueTask(req, res),
 );
+syncRoutes.post("/internal/sync/tasks/delete", (req, res) =>
+  void syncController.enqueueTaskDeleteInternal(req, res),
+);
 syncRoutes.post("/internal/sync/tasks/pull", (req, res) =>
   void syncController.enqueuePullInternal(req, res),
 );

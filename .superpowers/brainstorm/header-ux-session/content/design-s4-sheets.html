@@ -1,0 +1,33 @@
+<h2>Design §4 — Sheets rename &amp; file map</h2>
+<p class="subtitle">Đổi Sync → Sheets, gỡ Google card, tái dùng bloc. OK để viết spec?</p>
+
+<div class="section">
+  <p><span class="label">Sheets tab</span></p>
+  <ul style="margin:8px 0 0 18px;line-height:1.6;color:var(--text-muted,#64748b);">
+    <li>Label UI: <strong>Sync → Sheets</strong> (AppBar tabs + bottom nav)</li>
+    <li>Route/path nội bộ có thể giữ <code>/sync</code> hoặc đổi <code>/sheets</code> nếu dễ — ưu tiên đổi label trước, path tùy effort nhỏ</li>
+    <li>Gỡ <code>_GoogleAccountsCard</code> khỏi <code>sync_tab_page.dart</code></li>
+    <li>Phần còn lại của tab (pull/full sync, sheet status) giữ nguyên</li>
+  </ul>
+</div>
+
+<div class="section">
+  <p><span class="label">Components mới / đổi</span></p>
+  <ul style="margin:8px 0 0 18px;line-height:1.6;color:var(--text-muted,#64748b);">
+    <li><code>app_shell.dart</code> — logo + AccountSwitcher + WorkspaceSwitcher + Sheets label</li>
+    <li><code>account_switcher.dart</code> (mới) — trigger + popup menu Google</li>
+    <li><code>workspace_switcher.dart</code> (mới) — drill-down org → group</li>
+    <li><code>workspace_picker_bar.dart</code> — thay bằng switcher hoặc thin-wrapper / xóa nếu không còn dùng</li>
+    <li>Reuse: <code>AppLogo</code>, <code>AuthBloc</code>, link/set-primary APIs, <code>WorkspaceBloc</code></li>
+  </ul>
+</div>
+
+<div class="section">
+  <p><span class="label">Error / edge</span></p>
+  <ul style="margin:8px 0 0 18px;line-height:1.6;color:var(--text-muted,#64748b);">
+    <li>Chưa có Google link → nút Account hiện CTA “Liên kết Google”</li>
+    <li>Set-primary / link fail → SnackBar</li>
+    <li>Chưa chọn org → Workspace hiện “Chọn tổ chức”; groups disabled đến khi có org</li>
+    <li>Org không còn groups → empty + “+ Tạo nhóm”</li>
+  </ul>
+</div>

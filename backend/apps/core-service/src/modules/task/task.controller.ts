@@ -31,7 +31,9 @@ export async function listTasks(req: Request, res: Response): Promise<void> {
   try {
     const user = await requireUser(req);
     const groupId = req.params.groupId as string;
-    const tasks = await taskService.listTasks(groupId, user.id);
+    const rootsOnly =
+      req.query.rootsOnly === "true" || req.query.rootsOnly === "1";
+    const tasks = await taskService.listTasks(groupId, user.id, { rootsOnly });
     res.json({ tasks });
   } catch (err) {
     sendError(res, err, logger);
@@ -89,7 +91,7 @@ export async function completeTask(req: Request, res: Response): Promise<void> {
 export async function completeTaskInternal(req: Request, res: Response): Promise<void> {
   try {
     if (req.header("x-internal-token") !== internalToken) {
-      throw new AppError("Unauthorized", "UNAUTHORIZED", 401);
+      throw new AppError("Chưa xác thực", "UNAUTHORIZED", 401);
     }
     const body = z
       .object({
@@ -113,6 +115,17 @@ export async function assignTask(req: Request, res: Response): Promise<void> {
     const body = AssignTaskSchema.parse(req.body);
     await taskService.assignTask(groupId, code, user.id, body.userId);
     res.status(201).json({ ok: true });
+  } catch (err) {
+    sendError(res, err, logger);
+  }
+}
+
+export async function deleteTask(req: Request, res: Response): Promise<void> {
+  try {
+    const user = await requireUser(req);
+    const { groupId, code } = req.params as { groupId: string; code: string };
+    const result = await taskService.deleteTask(groupId, code, user.id);
+    res.json(result);
   } catch (err) {
     sendError(res, err, logger);
   }

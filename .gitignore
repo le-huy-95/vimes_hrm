@@ -1,8 +1,0 @@
-node_modules/
-dist/
-.env
-*.log
-coverage/
-.DS_Store
-.worktrees/
-.superpowers/

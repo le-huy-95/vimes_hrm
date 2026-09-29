@@ -31,7 +31,7 @@ export async function handleGoogleChatEvent(input: GoogleChatEventInput) {
   if ((input.verificationToken ?? verificationToken) !== verificationToken) {
     // Cho phép bỏ token khi GOOGLE_CHAT_ALLOW_UNVERIFIED=true (chỉ local)
     if (process.env.GOOGLE_CHAT_ALLOW_UNVERIFIED !== "true") {
-      throw new AppError("Invalid verification token", "UNAUTHORIZED", 401);
+      throw new AppError("Token xác minh không hợp lệ", "UNAUTHORIZED", 401);
     }
   }
 
@@ -52,7 +52,7 @@ export async function handleGoogleChatEvent(input: GoogleChatEventInput) {
 
   if (input.action === "COMPLETE_TASK") {
     if (!input.userId || !input.groupId || !input.taskCode) {
-      throw new AppError("COMPLETE_TASK thiếu userId/groupId/taskCode", "VALIDATION", 400);
+      throw new AppError("Lệnh hoàn thành việc thiếu userId/groupId/taskCode", "VALIDATION", 400);
     }
     try {
       await completeTaskViaCore({
@@ -65,7 +65,7 @@ export async function handleGoogleChatEvent(input: GoogleChatEventInput) {
         await sendChatEmailFallback({
           to: input.fallbackEmail,
           subject: `[Manage Teams] Không hoàn thành được ${input.taskCode}`,
-          text: `Không hoàn thành task ${input.taskCode} từ Google Chat. Mở app để thử lại.`,
+          text: `Không hoàn thành được công việc ${input.taskCode} từ Google Chat. Mở app để thử lại.`,
         });
       }
       throw err;
@@ -79,18 +79,18 @@ export async function handleGoogleChatEvent(input: GoogleChatEventInput) {
       deduped: false as const,
       card: {
         header: "Đã hoàn thành",
-        text: `Task ${input.taskCode} đánh dấu DONE (source=chat).`,
+        text: `Công việc ${input.taskCode} đã đánh dấu hoàn thành (nguồn: chat).`,
       },
       googleChatResponse: buildTextCard(
         "Đã hoàn thành",
-        `Task <b>${input.taskCode}</b> đã DONE (completed_source=chat).`,
+        `Công việc <b>${input.taskCode}</b> đã hoàn thành (nguồn: chat).`,
       ),
     };
   }
 
   if (input.action === "ASK_BOT" || (input.type === "MESSAGE" && input.askText)) {
     if (!input.userId || !input.askText) {
-      throw new AppError("ASK_BOT thiếu userId/askText", "VALIDATION", 400);
+      throw new AppError("Lệnh hỏi bot thiếu userId/askText", "VALIDATION", 400);
     }
     const aiRes = await fetch(`${aiUrl}/internal/ai/bot-ask`, {
       method: "POST",
@@ -146,6 +146,6 @@ async function completeTaskViaCore(input: {
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new AppError(`Core complete failed: ${text}`, "CORE_ERROR", 502);
+    throw new AppError(`Hoàn thành công việc thất bại: ${text}`, "CORE_ERROR", 502);
   }
 }

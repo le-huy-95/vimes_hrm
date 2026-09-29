@@ -133,4 +133,43 @@ class ChatRepository {
       throw mapDioError(e);
     }
   }
+
+  Future<({String conversationId, String type, String? title})> ensureGroupChat(
+    String groupId,
+  ) async {
+    try {
+      final res = await _api.dio.post<Map<String, dynamic>>(
+        '/conversations/ensure-group',
+        data: {'groupId': groupId},
+      );
+      final data = res.data ?? {};
+      return (
+        conversationId: data['conversationId'] as String,
+        type: data['type'] as String? ?? 'GROUP',
+        title: data['title'] as String?,
+      );
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  Future<({String conversationId, String type, String? title})> ensureDm({
+    required String groupId,
+    required String peerUserId,
+  }) async {
+    try {
+      final res = await _api.dio.post<Map<String, dynamic>>(
+        '/conversations/ensure-dm',
+        data: {'groupId': groupId, 'peerUserId': peerUserId},
+      );
+      final data = res.data ?? {};
+      return (
+        conversationId: data['conversationId'] as String,
+        type: data['type'] as String? ?? 'DM',
+        title: data['title'] as String?,
+      );
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
 }

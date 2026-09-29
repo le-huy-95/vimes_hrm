@@ -1,0 +1,38 @@
+<h2>Design §3 — Flows, errors, tests</h2>
+<p class="subtitle">Core ghi DB → outbox → google-sync push/pull · Flutter gọi API có sẵn + PATCH mới</p>
+
+<div class="section">
+  <div class="label">Data flow</div>
+  <ol>
+    <li>Flutter PATCH due / assign / claim → <code>core-service</code></li>
+    <li>Core cập nhật <code>tasks</code> / <code>task_assignees</code>, bump <code>version</code>, ghi <code>task_events</code></li>
+    <li>Với mỗi ACTIVE assignee có Google link sẵn sàng → <code>notifyGoogleTaskPush</code> (title, notes, status, <strong>due</strong>)</li>
+    <li><code>google-sync-service</code> TASKS_PUSH partial patch; TASKS_PULL merge due vào task (creator/local-wins)</li>
+  </ol>
+</div>
+
+<div class="section">
+  <div class="label">Errors (giữ mã hiện có + mới)</div>
+  <ul>
+    <li><code>CLAIM_DISABLED</code> / <code>CLAIM_FULL</code> / <code>ASSIGN_FULL</code> / <code>NOT_ASSIGNEE</code> — giữ</li>
+    <li><code>INVALID_DUE_DATE</code> — format không phải YYYY-MM-DD</li>
+    <li><code>NOT_GROUP_MEMBER</code> — gán user ngoài nhóm</li>
+    <li>Google AUTH_REQUIRED — app vẫn đổi due/assignee; sync dừng (đã có)</li>
+  </ul>
+</div>
+
+<div class="section">
+  <div class="label">Tests tối thiểu</div>
+  <ul>
+    <li>BE: PATCH due → payload push có <code>due</code>; pull Google due cập nhật DB khi local cũ hơn</li>
+    <li>BE: create không assignee → không enqueue push; claim/assign → có push</li>
+    <li>FE: bloc/event due + assign member picker (smoke / unit nhẹ nếu đã có pattern)</li>
+  </ul>
+</div>
+
+<div class="section">
+  <div class="label">Out of scope đợt này</div>
+  <ul>
+    <li>Subtasks, star, Drive attach, multi tasklist, start/end time, unassign API, Google-like detail sheet</li>
+  </ul>
+</div>

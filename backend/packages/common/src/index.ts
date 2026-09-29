@@ -1,7 +1,2 @@
-export { loadEnv } from "./env.js";
-export type { AppEnv } from "./env.js";
-export { createLogger } from "./logger.js";
-export type { Logger } from "./logger.js";
-export { AppError, isAppError } from "./errors.js";
-export { buildHealth } from "./health.js";
-export type { HealthStatus } from "./health.js";
+/** @deprecated Dùng `@manage-teams/lib` — package này chỉ re-export để tương thích tạm. */
+export * from "@manage-teams/lib";

@@ -1,5 +1,5 @@
 import { Kafka, logLevel, type Consumer, type Producer, type EachMessagePayload } from "kafkajs";
-import type { Logger } from "@manage-teams/common";
+import type { Logger } from "@manage-teams/lib";
 import { type EventEnvelope, parseEnvelope } from "@manage-teams/contracts";
 
 export type KafkaClientOptions = {

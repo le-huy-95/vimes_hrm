@@ -55,11 +55,16 @@ class TasksFocusedDayChanged extends TasksEvent {
 }
 
 class TasksCreateRequested extends TasksEvent {
-  const TasksCreateRequested(this.title, {this.description});
+  const TasksCreateRequested(
+    this.title, {
+    this.description,
+    this.parentCode,
+  });
   final String title;
   final String? description;
+  final String? parentCode;
   @override
-  List<Object?> get props => [title, description];
+  List<Object?> get props => [title, description, parentCode];
 }
 
 class TasksDragRequested extends TasksEvent {
@@ -107,8 +112,30 @@ class TasksDueDateRequested extends TasksEvent {
   List<Object?> get props => [code, dueDate];
 }
 
+class TasksPatchRequested extends TasksEvent {
+  const TasksPatchRequested({
+    required this.code,
+    this.title,
+    this.description,
+    this.status,
+  });
+  final String code;
+  final String? title;
+  final String? description;
+  final String? status;
+  @override
+  List<Object?> get props => [code, title, description, status];
+}
+
 class TasksClaimRequested extends TasksEvent {
   const TasksClaimRequested(this.code);
+  final String code;
+  @override
+  List<Object?> get props => [code];
+}
+
+class TasksDeleteRequested extends TasksEvent {
+  const TasksDeleteRequested(this.code);
   final String code;
   @override
   List<Object?> get props => [code];

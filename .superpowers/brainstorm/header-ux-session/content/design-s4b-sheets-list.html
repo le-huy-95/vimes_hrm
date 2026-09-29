@@ -1,0 +1,44 @@
+<h2>Design §4 (cập nhật) — Tab Sheets</h2>
+<p class="subtitle">List sheet theo workspace + tạo gắn nhóm đang chọn. OK chứ?</p>
+
+<div class="mockup">
+  <div class="mockup-header">Sheets tab</div>
+  <div class="mockup-body" style="font-family:system-ui;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div>
+        <div style="font-weight:700;font-size:16px;">Sheets</div>
+        <div style="font-size:12px;color:#64748b;">Theo org/nhóm trong Vimes · email primary</div>
+      </div>
+      <button class="mock-button" style="font-size:12px;">+ Tạo sheet</button>
+    </div>
+    <div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+      <div style="padding:10px 12px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;">
+        <div>
+          <div style="font-size:13px;font-weight:600;">Acme · Design — Tasks Matrix</div>
+          <div style="font-size:11px;color:#64748b;">Gắn nhóm Design · Primary you@…</div>
+        </div>
+        <span style="font-size:11px;color:#0d9488;">Nhóm hiện tại</span>
+      </div>
+      <div style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">
+        <div style="font-size:13px;font-weight:600;">Acme · Eng — Tasks Matrix</div>
+        <div style="font-size:11px;color:#64748b;">Gắn nhóm Engineering</div>
+      </div>
+      <div style="padding:10px 12px;color:#94a3b8;font-size:12px;">Beta · Ops — chưa có sheet</div>
+    </div>
+    <div style="margin-top:12px;padding:10px;background:#f8fafc;border-radius:8px;font-size:12px;color:#64748b;">
+      Chọn 1 sheet → giữ actions sync (pull / push / mở Google) như hiện tại cho nhóm đó.
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:16px;">
+  <p><span class="label">Quy tắc</span></p>
+  <ul style="margin:8px 0 0 18px;line-height:1.6;color:var(--text-muted,#64748b);">
+    <li><strong>List</strong>: chỉ sheet đã gắn group trong Vimes (không browse toàn Drive)</li>
+    <li>Scope list: groups user có quyền trong các org đã load (ưu tiên org đang chọn; có thể mở rộng all orgs sau)</li>
+    <li><strong>Tạo sheet</strong>: gắn <em>nhóm đang chọn</em> trên header → reuse <code>ensureSheet(groupId)</code></li>
+    <li>Nhóm đã có sheet → “Tạo” disabled / báo đã có (1 sheet / group)</li>
+    <li>Gỡ <code>_GoogleAccountsCard</code>; account quản lý ở header</li>
+    <li>Label Sync → Sheets; pull/push giữ cho sheet/group được chọn</li>
+  </ul>
+</div>

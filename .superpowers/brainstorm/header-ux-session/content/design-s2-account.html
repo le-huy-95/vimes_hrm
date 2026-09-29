@@ -1,0 +1,33 @@
+<h2>Design §2 — Account menu</h2>
+<p class="subtitle">Nút email mở menu Google primary. OK chứ?</p>
+
+<div class="mockup">
+  <div class="mockup-header">Account dropdown</div>
+  <div class="mockup-body" style="font-family:system-ui;max-width:320px;margin:0 auto;">
+    <div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.08);">
+      <div style="padding:10px 12px;background:#f8fafc;border-bottom:1px solid #e5e7eb;">
+        <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;">Google đang liên kết</div>
+        <div style="font-size:13px;font-weight:600;margin-top:2px;">you@company.com</div>
+      </div>
+      <div style="padding:6px;">
+        <div style="padding:8px 10px;border-radius:8px;background:#ccfbf1;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:13px;">you@company.com</span>
+          <span style="font-size:11px;color:#0d9488;font-weight:600;">Primary</span>
+        </div>
+        <div style="padding:8px 10px;border-radius:8px;font-size:13px;">other@gmail.com</div>
+        <div style="padding:8px 10px;border-radius:8px;font-size:13px;color:#0d9488;font-weight:600;">+ Liên kết email khác</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:16px;">
+  <p><span class="label">Hành vi</span></p>
+  <ul style="margin:8px 0 0 18px;line-height:1.6;color:var(--text-muted,#64748b);">
+    <li>Data từ <code>AuthAuthenticated.user.googleAccounts</code></li>
+    <li>Chọn email khác → gọi API set-primary (giữ session Vimes) → <code>AuthGoogleLinked</code> / refresh me</li>
+    <li>“+ Liên kết email khác” → flow Google link hiện có (như Sync card / link-google)</li>
+    <li>Không có đăng xuất trong menu này (logout vẫn IconButton)</li>
+    <li>Gỡ <code>_GoogleAccountsCard</code> khỏi tab Sheets (ex-Sync)</li>
+  </ul>
+</div>

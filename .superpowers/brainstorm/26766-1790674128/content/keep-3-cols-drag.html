@@ -1,0 +1,36 @@
+<h2>Board giữ 3 cột — kéo thả thế nào?</h2>
+<p class="subtitle">IN_PROGRESS vẫn nằm trên app; Google Sheets chỉ Todo/Done như hiện tại.</p>
+
+<div class="cards">
+  <div class="card" data-choice="sequential" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:20px;min-height:120px;font-size:12px;flex-wrap:wrap">
+        <div style="background:#f0f4f4;border-radius:8px;padding:12px 14px;font-weight:700">Todo</div>
+        <span style="color:#0d9488;font-size:18px">→</span>
+        <div style="background:#fff7ed;border-radius:8px;padding:12px 14px;font-weight:700">In progress</div>
+        <span style="color:#0d9488;font-size:18px">→</span>
+        <div style="background:#e6f7f4;border-radius:8px;padding:12px 14px;font-weight:700">Done</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>1 — Tuần tự (như logic hiện tại)</h3>
+      <p>Todo → In progress (claim), In progress → Done (complete). Không nhảy cột, không kéo ngược.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="free" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:20px;min-height:120px;font-size:12px;flex-wrap:wrap">
+        <div style="background:#f0f4f4;border-radius:8px;padding:12px 14px;font-weight:700">Todo</div>
+        <span style="color:#0d9488;font-size:18px">⇄</span>
+        <div style="background:#fff7ed;border-radius:8px;padding:12px 14px;font-weight:700">In progress</div>
+        <span style="color:#0d9488;font-size:18px">⇄</span>
+        <div style="background:#e6f7f4;border-radius:8px;padding:12px 14px;font-weight:700">Done</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>2 — Kéo tự do mọi cột</h3>
+      <p>Kéo sang cột nào cũng được (kể cả Todo→Done, Done→Todo). Cần thêm API reopen / set status.</p>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,32 @@
+<h2>Kéo thả đổi trạng thái theo hướng nào?</h2>
+<p class="subtitle">Hiện API chỉ có claim (→ đang làm) và complete (→ DONE). Chưa có “mở lại” task đã xong.</p>
+
+<div class="cards">
+  <div class="card" data-choice="one-way" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:24px;min-height:140px;font-size:13px">
+        <div style="background:#f0f4f4;border-radius:8px;padding:16px 20px;font-weight:700">Cần làm</div>
+        <div style="font-size:22px;color:#0d9488">→</div>
+        <div style="background:#e6f7f4;border-radius:8px;padding:16px 20px;font-weight:700">Hoàn thành</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>1 — Chỉ kéo sang Hoàn thành</h3>
+      <p>Kéo từ Cần làm → Hoàn thành = complete. Không kéo ngược. Ít thay đổi backend, ship nhanh.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="two-way" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:24px;min-height:140px;font-size:13px">
+        <div style="background:#f0f4f4;border-radius:8px;padding:16px 20px;font-weight:700">Cần làm</div>
+        <div style="font-size:22px;color:#0d9488">⇄</div>
+        <div style="background:#e6f7f4;border-radius:8px;padding:16px 20px;font-weight:700">Hoàn thành</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>2 — Kéo 2 chiều</h3>
+      <p>Kéo sang Hoàn thành = complete; kéo về Cần làm = reopen (cần thêm API backend).</p>
+    </div>
+  </div>
+</div>

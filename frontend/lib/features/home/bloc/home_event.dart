@@ -52,3 +52,11 @@ class HomeRemoveMemberRequested extends HomeEvent {
   @override
   List<Object?> get props => [userId];
 }
+
+class HomeAddMemberRequested extends HomeEvent {
+  const HomeAddMemberRequested(this.userId, {this.role = 'MEMBER'});
+  final String userId;
+  final String role;
+  @override
+  List<Object?> get props => [userId, role];
+}

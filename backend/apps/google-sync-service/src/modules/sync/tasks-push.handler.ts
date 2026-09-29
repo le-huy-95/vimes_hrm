@@ -87,6 +87,22 @@ export async function processTaskPushJob(job: {
 
     const listId = await ensureAppTaskList(tasksApi);
 
+    const localTask = await prismaRead.task.findUnique({
+      where: { id: job.aggregateId },
+      select: { parentId: true },
+    });
+    let googleParentId: string | undefined;
+    if (localTask?.parentId) {
+      const parentLink = await prismaRead.googleTaskLink.findUnique({
+        where: { taskId_userId: { taskId: localTask.parentId, userId: job.userId } },
+      });
+      if (!parentLink || parentLink.status !== "LINKED") {
+        await markJobRetry(job.id, "parent_not_linked", 5_000, job.attempts);
+        return;
+      }
+      googleParentId = parentLink.googleTaskId;
+    }
+
     const existing = await prismaRead.googleTaskLink.findUnique({
       where: { taskId_userId: { taskId: job.aggregateId, userId: job.userId } },
     });
@@ -113,6 +129,9 @@ export async function processTaskPushJob(job: {
       }
       if (patch.due !== undefined) {
         requestBody.due = dueToGoogleRfc3339(patch.due) ?? null;
+      }
+      if (googleParentId) {
+        requestBody.parent = googleParentId;
       }
       await tasksApi.tasks.patch({
         tasklist: listId,
@@ -154,9 +173,10 @@ export async function processTaskPushJob(job: {
           ...(payload.due
             ? { due: dueToGoogleRfc3339(payload.due) ?? undefined }
             : {}),
+          ...(googleParentId ? { parent: googleParentId } : {}),
         },
       });
-      if (!created.data.id) throw new Error("Google Tasks insert missing id");
+      if (!created.data.id) throw new Error("Google Tasks thiếu id khi tạo");
 
       await prismaWrite.googleTaskLink.update({
         where: { taskId_userId: { taskId: job.aggregateId, userId: job.userId } },
@@ -225,6 +245,6 @@ async function ensureAppTaskList(
   const found = listed.data.items?.find((i) => i.title === listTitle);
   if (found?.id) return found.id;
   const created = await tasksApi.tasklists.insert({ requestBody: { title: listTitle } });
-  if (!created.data.id) throw new Error("Failed to create task list");
+  if (!created.data.id) throw new Error("Không tạo được danh sách việc trên Google");
   return created.data.id;
 }

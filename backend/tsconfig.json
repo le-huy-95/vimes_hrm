@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/lib" },
+    { "path": "packages/db" },
+    { "path": "apps/api-gateway" },
+    { "path": "apps/identity-service" },
+    { "path": "apps/core-service" },
+    { "path": "apps/chat-service" },
+    { "path": "apps/worker-service" },
+    { "path": "apps/ai-service" },
+    { "path": "apps/google-sync-service" }
+  ]
+}

@@ -1,0 +1,36 @@
+<h2>Khuyến nghị: A — Ẩn comment</h2>
+<p class="subtitle">Kết quả nghiên cứu codebase (không đoán).</p>
+
+<div class="section">
+  <p class="label">Evidence</p>
+  <ul>
+    <li><code>Task</code> / <code>TaskListItem</code> không có field comment / commentCount</li>
+    <li>Prisma: không có model TaskComment — chỉ có Message (chat), tách biệt task</li>
+    <li>Frontend tasks feature: zero reference tới comment</li>
+    <li>Spec/plan gần đây (due date, drag board) cũng không đề cập comment trên task</li>
+  </ul>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="hide-comments" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Ẩn comment — đúng nhất ✓</h3>
+      <p>Không fake data. Layout footer: avatar + tên · ngày. Khi sau này có API comment thì thêm slot này.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="show-zero" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Hiện 0 — không nên</h3>
+      <p>UI giả vờ có comment system; user click/expect sẽ thất vọng.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="wire-backend" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Làm backend — scope lệch</h3>
+      <p>Phù hợp feature riêng (task discussion), không phải “sửa UI board như ảnh”.</p>
+    </div>
+  </div>
+</div>

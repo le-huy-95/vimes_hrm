@@ -148,6 +148,7 @@ class CoreRepository {
     int? maxAssignees,
     List<String>? assigneeIds,
     String? dueDate,
+    String? parentCode,
   }) async {
     try {
       final res = await _api.dio.post<Map<String, dynamic>>(
@@ -160,6 +161,7 @@ class CoreRepository {
           if (maxAssignees != null) 'maxAssignees': maxAssignees,
           if (assigneeIds != null) 'assigneeIds': assigneeIds,
           if (dueDate != null) 'dueDate': dueDate,
+          if (parentCode != null) 'parentCode': parentCode,
         },
       );
       final t = res.data?['task'] as Map<String, dynamic>? ?? {};
@@ -239,6 +241,18 @@ class CoreRepository {
         '/groups/$groupId/tasks/$code/assign',
         data: {'userId': userId},
       );
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  Future<List<String>> deleteTask(String groupId, String code) async {
+    try {
+      final res = await _api.dio.delete<Map<String, dynamic>>(
+        '/groups/$groupId/tasks/$code',
+      );
+      final codes = res.data?['codes'] as List<dynamic>? ?? [code];
+      return codes.map((e) => e.toString()).toList();
     } catch (e) {
       throw mapDioError(e);
     }

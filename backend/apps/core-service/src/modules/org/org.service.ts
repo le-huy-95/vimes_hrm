@@ -46,7 +46,7 @@ export async function inviteToOrg(
   const { appPublicUrl, inviteHours } = inviteConfig();
 
   const org = await prismaRead.organization.findUnique({ where: { id: orgId } });
-  if (!org) throw new AppError("Not found", "NOT_FOUND", 404);
+  if (!org) throw new AppError("Không tìm thấy", "NOT_FOUND", 404);
 
   const inviter = await prismaRead.user.findUnique({ where: { id: inviterId } });
   const inviterName = inviter?.displayName || inviter?.email || "Thành viên Vimes";

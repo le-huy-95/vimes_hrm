@@ -19,6 +19,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<HomeInviteRequested>(_onInvite);
     on<HomeAcceptInviteRequested>(_onAcceptInvite);
     on<HomeRemoveMemberRequested>(_onRemoveMember);
+    on<HomeAddMemberRequested>(_onAddMember);
 
     _wsSub = _workspace.stream.listen((ws) {
       if (ws is WorkspaceReady) {
@@ -154,6 +155,27 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       await _core.removeGroupMember(_groupId!, event.userId);
       final detail = await _core.getGroup(_groupId!);
       emit(HomeActionSuccess('Đã xóa thành viên', members: detail.members));
+      emit(HomeReady(members: detail.members));
+    } catch (e) {
+      emit(HomeFailure(_msg(e), members: _members));
+      emit(HomeReady(members: _members));
+    }
+  }
+
+  Future<void> _onAddMember(
+    HomeAddMemberRequested event,
+    Emitter<HomeState> emit,
+  ) async {
+    if (_groupId == null) return;
+    emit(HomeReady(members: _members, busy: true));
+    try {
+      await _core.addGroupMember(
+        _groupId!,
+        userId: event.userId.trim(),
+        role: event.role,
+      );
+      final detail = await _core.getGroup(_groupId!);
+      emit(HomeActionSuccess('Đã thêm thành viên', members: detail.members));
       emit(HomeReady(members: detail.members));
     } catch (e) {
       emit(HomeFailure(_msg(e), members: _members));

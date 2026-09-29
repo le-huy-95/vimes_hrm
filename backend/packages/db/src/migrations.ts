@@ -531,4 +531,18 @@ CREATE INDEX IF NOT EXISTS google_chat_spaces_group_idx
   ON google_chat_spaces (group_id) WHERE group_id IS NOT NULL;
 `,
   },
+  {
+    id: "015_task_parent_id",
+    sql: `
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES tasks(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS tasks_group_parent_idx ON tasks (group_id, parent_id);
+`,
+  },
+  {
+    id: "016_task_starred",
+    sql: `
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS starred BOOLEAN NOT NULL DEFAULT false;
+CREATE INDEX IF NOT EXISTS tasks_group_starred_idx ON tasks (group_id, starred) WHERE starred = true;
+`,
+  },
 ];

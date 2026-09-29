@@ -92,6 +92,76 @@ export async function enqueueTaskPush(input: EnqueueTaskPushInput) {
   return { jobId: job.id, deduped: false };
 }
 
+export type EnqueueTaskDeleteInput = {
+  userId: string;
+  taskId: string;
+};
+
+/** Hủy push đang chờ khi task bị xóa trên app. */
+async function cancelPendingTaskPushes(taskId: string, userId?: string): Promise<void> {
+  await prismaWrite.syncJob.updateMany({
+    where: {
+      aggregateId: taskId,
+      jobType: "TASKS_PUSH",
+      status: { in: ["PENDING", "RETRY"] },
+      ...(userId ? { userId } : {}),
+    },
+    data: {
+      status: "DONE",
+      lastError: "cancelled_task_deleted",
+      updatedAt: new Date(),
+    },
+  });
+}
+
+/** Enqueue xóa task trên Google Tasks (một user / một link). */
+export async function enqueueTaskDelete(input: EnqueueTaskDeleteInput) {
+  await cancelPendingTaskPushes(input.taskId, input.userId);
+
+  const existing = await prismaWrite.syncJob.findFirst({
+    where: {
+      userId: input.userId,
+      jobType: "TASKS_DELETE",
+      aggregateId: input.taskId,
+      status: { in: ["PENDING", "RETRY", "RUNNING"] },
+    },
+  });
+  if (existing) {
+    return { jobId: existing.id, deduped: true as const };
+  }
+
+  const job = await prismaWrite.syncJob.create({
+    data: {
+      userId: input.userId,
+      jobType: "TASKS_DELETE",
+      aggregateType: "task",
+      aggregateId: input.taskId,
+      payload: { op: "delete" },
+      status: "PENDING",
+      nextRunAt: new Date(),
+    },
+  });
+  return { jobId: job.id, deduped: false as const };
+}
+
+/** Sau khi app xóa task — enqueue delete cho mọi Google link còn LINKED/CREATING. */
+export async function enqueueTaskDeletesForAppTask(taskId: string) {
+  await cancelPendingTaskPushes(taskId);
+  const links = await prismaRead.googleTaskLink.findMany({
+    where: {
+      taskId,
+      status: { in: ["LINKED", "CREATING"] },
+    },
+    select: { userId: true },
+  });
+  let enqueued = 0;
+  for (const link of links) {
+    const r = await enqueueTaskDelete({ userId: link.userId, taskId });
+    if (!r.deduped) enqueued += 1;
+  }
+  return { enqueued, links: links.length };
+}
+
 /**
  * Enqueue kéo delta Google Tasks (Phase 2.5).
  * Cooldown mặc định 5 phút trừ khi force.

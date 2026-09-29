@@ -1,6 +1,7 @@
 import { createLogger } from "@manage-teams/lib";
 import { claimNextJobs, markJobDone } from "./sync.service.js";
 import { processTaskPushJob } from "./tasks-push.handler.js";
+import { processTaskDeleteJob } from "./tasks-delete.handler.js";
 import { processTaskPullJob } from "./tasks-pull.handler.js";
 import { processSheetsPushJob, processSheetsPullJob } from "./sheets.handler.js";
 import { reconcileStaleLinks } from "./reconcile.service.js";
@@ -28,6 +29,8 @@ export function startSyncWorker(): () => void {
         };
         if (job.jobType === "TASKS_PUSH") {
           await processTaskPushJob(base);
+        } else if (job.jobType === "TASKS_DELETE") {
+          await processTaskDeleteJob(base);
         } else if (job.jobType === "TASKS_PULL") {
           await processTaskPullJob(base);
         } else if (job.jobType === "SHEETS_PUSH") {

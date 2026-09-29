@@ -139,7 +139,7 @@ class SyncBloc extends Bloc<SyncEvent, SyncState> {
     final prev = _ready;
     if (prev != null) emit(prev.copyWith(busy: true));
     try {
-      await _sync.pull();
+      await _sync.pull(force: true);
       final status = await _sync.status();
       final next = (prev ?? SyncReady(status: status)).copyWith(
         status: status,

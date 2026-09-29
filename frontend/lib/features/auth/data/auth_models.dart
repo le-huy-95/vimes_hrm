@@ -18,10 +18,28 @@ class RegisterResponse {
 }
 
 class AuthUser {
-  const AuthUser({required this.id, required this.email});
+  const AuthUser({
+    required this.id,
+    required this.email,
+    this.googleAccounts = const [],
+  });
 
   final String id;
   final String email;
+  final List<GoogleAccountBrief> googleAccounts;
+
+  bool get hasGoogleLinked => googleAccounts.isNotEmpty;
+
+  AuthUser copyWith({
+    String? id,
+    String? email,
+    List<GoogleAccountBrief>? googleAccounts,
+  }) =>
+      AuthUser(
+        id: id ?? this.id,
+        email: email ?? this.email,
+        googleAccounts: googleAccounts ?? this.googleAccounts,
+      );
 
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
         id: json['id'] as String,
@@ -112,17 +130,22 @@ class MeUser {
       );
 
   AuthUser toAuthUser() => AuthUser(id: id, email: email);
+
+  AuthUser toAuthUserWithAccounts(List<GoogleAccountBrief> accounts) =>
+      AuthUser(id: id, email: email, googleAccounts: accounts);
 }
 
 class GoogleAccountBrief {
   const GoogleAccountBrief({
     required this.googleSub,
+    this.email,
     required this.accountType,
     required this.isPrimary,
     required this.linkedAt,
   });
 
   final String googleSub;
+  final String? email;
   final String accountType;
   final bool isPrimary;
   final DateTime linkedAt;
@@ -130,6 +153,7 @@ class GoogleAccountBrief {
   factory GoogleAccountBrief.fromJson(Map<String, dynamic> json) =>
       GoogleAccountBrief(
         googleSub: json['google_sub'] as String,
+        email: json['email'] as String?,
         accountType: json['account_type'] as String,
         isPrimary: json['is_primary'] as bool,
         linkedAt: DateTime.parse(json['linked_at'] as String),

@@ -45,4 +45,46 @@ void main() {
     expect(m.deleted, isTrue);
     expect(m.reactions.single.emoji, '👍');
   });
+
+  test('SheetStatusResponse parses null sheet', () {
+    final r = SheetStatusResponse.fromJson({
+      'sheet': null,
+      'watches': <dynamic>[],
+    });
+    expect(r.sheet, isNull);
+    expect(r.watches, isEmpty);
+  });
+
+  test('GroupSheetDto local matrix has no google url', () {
+    final s = GroupSheetDto.fromJson({
+      'id': 'sid',
+      'groupId': 'gid',
+      'spreadsheetId': 'local-sheet-gid',
+      'sheetTitle': 'Tasks',
+      'driveFileId': 'local-drive-gid',
+      'status': 'PENDING',
+      'lastPushAt': null,
+      'lastPullAt': null,
+      'contentHash': null,
+      'rowHashes': <String, dynamic>{},
+      'writableColumns': ['status', 'personal_note'],
+      'ownerUserId': 'u1',
+      'createdAt': '2026-09-28T07:00:00.000Z',
+      'updatedAt': '2026-09-28T07:00:00.000Z',
+    });
+    expect(s.isLocalMatrix, isTrue);
+    expect(s.googleSheetUrl, isNull);
+    expect(s.writableColumns, ['status', 'personal_note']);
+  });
+
+  test('SheetsEnqueueResponse parses debounceMs', () {
+    final e = SheetsEnqueueResponse.fromJson({
+      'jobId': 'j1',
+      'deduped': false,
+      'debounceMs': 45000,
+    });
+    expect(e.jobId, 'j1');
+    expect(e.deduped, isFalse);
+    expect(e.debounceMs, 45000);
+  });
 }

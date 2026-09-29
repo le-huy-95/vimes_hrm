@@ -169,6 +169,8 @@ model Task {
   allowClaim     Boolean   @default(true) @map("allow_claim")
   version        Int       @default(1)
   dueDate        DateTime? @map("due_date") @db.Date
+  starred        Boolean   @default(false)
+  parentId       String?   @map("parent_id") @db.Uuid
   deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(6)
   createdById    String?   @map("created_by") @db.Uuid
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -176,10 +178,13 @@ model Task {
 
   group     Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
   createdBy User?          @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  parent    Task?          @relation("TaskSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Task[]         @relation("TaskSubtasks")
   assignees TaskAssignee[]
   events    TaskEvent[]
   googleLinks GoogleTaskLink[]
 
+  @@index([groupId, parentId])
   @@unique([groupId, code])
   @@map("tasks")
 }

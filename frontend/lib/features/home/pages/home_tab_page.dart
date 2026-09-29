@@ -1,3 +1,4 @@
+import 'package:characters/characters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:manage_teams/core/skin/color_skin.dart';
@@ -9,8 +10,8 @@ import 'package:manage_teams/features/workspace/bloc/workspace_event.dart';
 import 'package:manage_teams/features/workspace/bloc/workspace_state.dart';
 import 'package:manage_teams/shared/snackbar/simple_snackbar_service.dart';
 import 'package:manage_teams/shared/widgets/app_button.dart';
+import 'package:manage_teams/shared/widgets/app_prompt_dialog.dart';
 import 'package:manage_teams/shared/widgets/app_section_card.dart';
-import 'package:manage_teams/shared/widgets/app_text_field.dart';
 
 class HomeTabPage extends StatelessWidget {
   const HomeTabPage({super.key});
@@ -40,9 +41,9 @@ class HomeTabPage extends StatelessWidget {
                   AppButton(
                     label: 'Thử lại',
                     variant: AppButtonVariant.primary,
-                    onPressed: () => context
-                        .read<WorkspaceBloc>()
-                        .add(const WorkspaceStarted()),
+                    onPressed: () => context.read<WorkspaceBloc>().add(
+                      const WorkspaceStarted(),
+                    ),
                   ),
                 ],
               ),
@@ -72,9 +73,9 @@ class HomeTabPage extends StatelessWidget {
 
               return RefreshIndicator(
                 onRefresh: () async {
-                  context
-                      .read<WorkspaceBloc>()
-                      .add(const WorkspaceRefreshRequested());
+                  context.read<WorkspaceBloc>().add(
+                    const WorkspaceRefreshRequested(),
+                  );
                   context.read<HomeBloc>().add(const HomeStarted());
                 },
                 child: ListView(
@@ -95,15 +96,28 @@ class HomeTabPage extends StatelessWidget {
                         if (orgAdmin) ...[
                           AppButton(
                             label: 'Mời',
-                            onPressed: busy ? null : () => _promptInvite(context),
+                            onPressed: busy
+                                ? null
+                                : () => _promptInvite(context),
                             height: 40,
                           ),
                           const SizedBox(width: 8),
                           AppButton(
                             label: '+ Nhóm',
                             variant: AppButtonVariant.primary,
-                            onPressed:
-                                busy ? null : () => _promptCreateGroup(context),
+                            onPressed: busy
+                                ? null
+                                : () => _promptCreateGroup(context),
+                            height: 40,
+                          ),
+                        ],
+                        if (groupAdmin) ...[
+                          const SizedBox(width: 8),
+                          AppButton(
+                            label: '+ Member',
+                            onPressed: busy
+                                ? null
+                                : () => _promptAddMember(context),
                             height: 40,
                           ),
                         ],
@@ -139,7 +153,8 @@ class HomeTabPage extends StatelessWidget {
                                   spacing: 8,
                                   children: [
                                     TextButton(
-                                      onPressed: () => _promptCreateOrg(context),
+                                      onPressed: () =>
+                                          _promptCreateOrg(context),
                                       child: const Text('Tạo org mới'),
                                     ),
                                     TextButton(
@@ -197,8 +212,10 @@ class HomeTabPage extends StatelessWidget {
                     const SizedBox(height: 20),
                     const Text(
                       'Thành viên nhóm',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     if (loading)
@@ -225,11 +242,10 @@ class HomeTabPage extends StatelessWidget {
                                       ? ColorSkin.tealLight
                                       : ColorSkin.orangeLight,
                                   child: Text(
-                                    (members[i].displayName ??
-                                            members[i].email)
-                                        .characters
-                                        .first
-                                        .toUpperCase(),
+                                    _memberInitial(
+                                      members[i].displayName,
+                                      members[i].email,
+                                    ),
                                   ),
                                 ),
                                 title: Text(
@@ -264,9 +280,8 @@ class HomeTabPage extends StatelessWidget {
                                           Icons.delete_outline,
                                           color: ColorSkin.error,
                                         ),
-                                        onPressed: () => context
-                                            .read<HomeBloc>()
-                                            .add(
+                                        onPressed: () =>
+                                            context.read<HomeBloc>().add(
                                               HomeRemoveMemberRequested(
                                                 members[i].userId,
                                               ),
@@ -289,6 +304,12 @@ class HomeTabPage extends StatelessWidget {
     );
   }
 
+  static String _memberInitial(String? displayName, String email) {
+    final label = (displayName?.isNotEmpty ?? false) ? displayName! : email;
+    if (label.isEmpty) return '?';
+    return label.characters.first.toUpperCase();
+  }
+
   Future<void> _promptCreateOrg(BuildContext context) async {
     final name = await _prompt(context, title: 'Tạo tổ chức', hint: 'Tên org');
     if (name == null || name.trim().isEmpty || !context.mounted) return;
@@ -302,8 +323,11 @@ class HomeTabPage extends StatelessWidget {
   }
 
   Future<void> _promptInvite(BuildContext context) async {
-    final email =
-        await _prompt(context, title: 'Mời thành viên', hint: 'email@...');
+    final email = await _prompt(
+      context,
+      title: 'Mời thành viên',
+      hint: 'email@...',
+    );
     if (email == null || email.trim().isEmpty || !context.mounted) return;
     context.read<HomeBloc>().add(HomeInviteRequested(email));
   }
@@ -317,6 +341,16 @@ class HomeTabPage extends StatelessWidget {
     if (token == null || token.trim().length < 10 || !context.mounted) return;
     context.read<HomeBloc>().add(HomeAcceptInviteRequested(token));
   }
+
+  Future<void> _promptAddMember(BuildContext context) async {
+    final userId = await _prompt(
+      context,
+      title: 'Thêm thành viên nhóm',
+      hint: 'userId (UUID)',
+    );
+    if (userId == null || userId.trim().isEmpty || !context.mounted) return;
+    context.read<HomeBloc>().add(HomeAddMemberRequested(userId));
+  }
 }
 
 class _EmptyOrg extends StatelessWidget {
@@ -327,34 +361,56 @@ class _EmptyOrg extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Chưa có tổ chức',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: ColorSkin.title,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: ColorSkin.tealLight,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(
+                  Icons.apartment_rounded,
+                  size: 36,
+                  color: ColorSkin.primary,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Tạo tổ chức đầu tiên để bắt đầu quản lý nhóm và công việc.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: ColorSkin.subtitle),
-            ),
-            const SizedBox(height: 20),
-            AppButton(
-              label: 'Tạo tổ chức đầu tiên',
-              variant: AppButtonVariant.primary,
-              onPressed: onCreate,
-            ),
-            const SizedBox(height: 12),
-            AppButton(label: 'Chấp nhận lời mời', onPressed: onAccept),
-          ],
+              const SizedBox(height: 20),
+              const Text(
+                'Chưa có tổ chức',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: ColorSkin.title,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Tạo tổ chức để bắt đầu công việc.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: ColorSkin.subtitle, height: 1.4),
+              ),
+              const SizedBox(height: 24),
+              AppButton(
+                label: 'Tạo tổ chức',
+                variant: AppButtonVariant.primary,
+                expand: true,
+                onPressed: onCreate,
+              ),
+              const SizedBox(height: 12),
+              AppButton(
+                label: 'Chấp nhận lời mời',
+                expand: true,
+                onPressed: onAccept,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -365,27 +421,6 @@ Future<String?> _prompt(
   BuildContext context, {
   required String title,
   required String hint,
-}) async {
-  final controller = TextEditingController();
-  return showDialog<String>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(title),
-      content: AppTextField(
-        label: hint,
-        controller: controller,
-        hintText: hint,
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child: const Text('Hủy'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(ctx, controller.text),
-          child: const Text('OK'),
-        ),
-      ],
-    ),
-  );
+}) {
+  return showAppPromptDialog(context, title: title, hint: hint);
 }

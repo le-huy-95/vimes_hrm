@@ -1,0 +1,57 @@
+<h2>Nút Workspace — chọn cách chọn org / nhóm</h2>
+<p class="subtitle">Layout B: nút thứ 2 hiện “Acme · Design”. Click mở menu. Chọn 1 cách.</p>
+
+<div class="cards">
+  <div class="card" data-choice="nested" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f7f8fa;">
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px;font-family:system-ui;font-size:12px;max-width:280px;margin:0 auto;">
+        <div style="font-size:10px;text-transform:uppercase;color:#94a3b8;margin-bottom:6px;">Tổ chức</div>
+        <div style="padding:6px 8px;background:#ccfbf1;border-radius:6px;font-weight:600;">✓ Acme Corp</div>
+        <div style="padding:6px 8px;">Beta Inc</div>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:10px 0;">
+        <div style="font-size:10px;text-transform:uppercase;color:#94a3b8;margin-bottom:6px;">Nhóm trong Acme Corp</div>
+        <div style="padding:6px 8px;background:#ccfbf1;border-radius:6px;">✓ Design Team</div>
+        <div style="padding:6px 8px;">Engineering</div>
+        <div style="padding:6px 8px;color:#0d9488;margin-top:6px;">+ Tạo nhóm</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>1 — Một panel, 2 section</h3>
+      <p>Org ở trên, groups lọc theo org bên dưới. Đổi org → list nhóm đổi ngay.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="drill" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f7f8fa;">
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px;font-family:system-ui;font-size:12px;max-width:280px;margin:0 auto;">
+        <div style="font-size:10px;color:#94a3b8;margin-bottom:8px;">Bước 1: chọn tổ chức</div>
+        <div style="padding:6px 8px;background:#e0e7ff;border-radius:6px;">Acme Corp →</div>
+        <div style="padding:6px 8px;">Beta Inc →</div>
+        <div style="margin-top:12px;padding:8px;background:#f1f5f9;border-radius:6px;color:#64748b;font-size:11px;">
+          Sau khi chọn org → chuyển sang list nhóm của org đó
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>2 — Drill-down 2 bước</h3>
+      <p>Chọn org trước, rồi mới hiện groups. Gọn hơn khi nhiều org.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="keep-sheets" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f7f8fa;">
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px;font-family:system-ui;font-size:12px;max-width:280px;margin:0 auto;">
+        <div style="padding:8px;background:#f8fafc;border-radius:6px;margin-bottom:8px;text-align:center;color:#64748b;">
+          Giữ bottom sheet hiện tại<br/>(như WorkspacePickerBar)
+        </div>
+        <div style="height:60px;border:1px dashed #cbd5e1;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#94a3b8;">
+          Modal từ dưới lên
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>3 — Giữ bottom sheet cũ</h3>
+      <p>Nút mới chỉ là trigger; UX chọn org/group giữ như hiện tại.</p>
+    </div>
+  </div>
+</div>

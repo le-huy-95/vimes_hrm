@@ -1,0 +1,28 @@
+<h2>Design §1 — Data &amp; sync</h2>
+<p class="subtitle">Hạn chót date-only trên task nhóm · gán/claim kích hoạt Google push</p>
+
+<div class="section">
+  <div class="label">Schema</div>
+  <pre style="background:var(--surface-2);padding:1rem;border-radius:8px;overflow:auto;font-size:0.85rem">tasks.due_date  DATE NULL   -- chỉ ngày, timezone local user khi hiển thị
+-- không thêm starts_at / ends_at đợt này
+-- task_assignees giữ nguyên (multi)</pre>
+</div>
+
+<div class="section">
+  <div class="label">Google sync</div>
+  <ul>
+    <li><strong>Push:</strong> thêm <code>due</code> (RFC3339 midnight UTC date) vào payload cùng title/notes/status</li>
+    <li><strong>Pull:</strong> merge <code>due</code> → <code>tasks.due_date</code> (local thắng nếu <code>updatedAt</code> mới hơn)</li>
+    <li><strong>Khi nào có bản Google:</strong> chỉ khi user là ACTIVE assignee (claim hoặc được gán) — pool task chưa có link</li>
+    <li>Gỡ assignee / REMOVED → có thể detach link (out of scope tối thiểu: giữ link, không push tiếp)</li>
+  </ul>
+</div>
+
+<div class="section">
+  <div class="label">API mới / mở rộng</div>
+  <ul>
+    <li><code>PATCH /groups/:id/tasks/:code</code> — <code>{ title?, description?, dueDate?: "YYYY-MM-DD" | null }</code></li>
+    <li>Create/list/get đã có assignee — create mặc định <code>assigneeIds: []</code></li>
+    <li>Giữ <code>POST .../claim</code>, <code>POST .../assign</code> — assign xong enqueue TASKS_PUSH cho target</li>
+  </ul>
+</div>

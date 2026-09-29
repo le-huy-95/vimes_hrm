@@ -161,7 +161,8 @@ Middleware lives in `ai-service` (pattern similar to chat rate-limit).
 
 - Unit: link-resolver member vs non-member; planner tool selection; no cross-group links.
 - Light integration: chat returns only in-membership task links; exceed rate → 429.
-- CI must not require live `ANTHROPIC_API_KEY`.
+- CI must not require live `ANTHROPIC_API_KEY` or `OPENAI_API_KEY`.
+- Unit smoke: factory selects openai when only `OPENAI_API_KEY` is set (`AI_PROVIDER=auto`).
 
 ## Acceptance (adjusted)
 

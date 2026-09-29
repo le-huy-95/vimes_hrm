@@ -15,11 +15,11 @@ export function assertPlatformAdmin(userId: string): void {
   if (allow.size === 0) {
     // Dev: empty allowlist = mọi authenticated user (stub). Prod: set env.
     if (process.env.NODE_ENV === "production") {
-      throw new AppError("Forbidden", "FORBIDDEN", 403);
+      throw new AppError("Không có quyền", "FORBIDDEN", 403);
     }
     return;
   }
-  if (!allow.has(userId)) throw new AppError("Forbidden", "FORBIDDEN", 403);
+  if (!allow.has(userId)) throw new AppError("Không có quyền", "FORBIDDEN", 403);
 }
 
 /** Phase 6d: snapshot vận hành chỉ đọc. */
@@ -45,7 +45,7 @@ export async function getOpsSnapshot() {
     },
     dlqSummary: {
       stub: true,
-      message: "Wire Kafka DLQ metrics later — worker /internal/dlq/replay exists",
+      message: "Sẽ gắn metrics Kafka DLQ sau — worker /internal/dlq/replay đã có",
     },
     aiUsage: {
       sessionsLast24h: aiSessions24h,
