@@ -2,6 +2,7 @@ import { Router } from "express";
 import * as syncController from "./sync.controller.js";
 import * as chatEventsController from "../chat/chat-events.controller.js";
 import * as bridgeController from "../chat/bridge.controller.js";
+import * as chatProxyController from "../chat/chat-proxy.controller.js";
 
 export const syncRoutes: Router = Router();
 
@@ -66,4 +67,27 @@ syncRoutes.post("/internal/google-chat/egress", (req, res) =>
 );
 syncRoutes.post("/internal/google-chat/watch/renew", (req, res) =>
   void bridgeController.renewWatches(req, res),
+);
+
+syncRoutes.get("/sync/chat/readiness", (req, res) =>
+  void chatProxyController.readiness(req, res),
+);
+syncRoutes.get("/sync/chat/spaces", (req, res) =>
+  void chatProxyController.listSpacesHandler(req, res),
+);
+syncRoutes.get("/sync/chat/links", (req, res) => void chatProxyController.listLinks(req, res));
+syncRoutes.post("/sync/chat/links", (req, res) =>
+  void chatProxyController.createLinkHandler(req, res),
+);
+syncRoutes.delete("/sync/chat/links/:id", (req, res) =>
+  void chatProxyController.deleteLinkHandler(req, res),
+);
+syncRoutes.get("/sync/chat/spaces/:spaceName/messages", (req, res) =>
+  void chatProxyController.listMessagesHandler(req, res),
+);
+syncRoutes.post("/sync/chat/spaces/:spaceName/messages", (req, res) =>
+  void chatProxyController.sendMessageHandler(req, res),
+);
+syncRoutes.post("/internal/google-chat/leave-linked", (req, res) =>
+  void chatProxyController.leaveLinkedInternal(req, res),
 );
