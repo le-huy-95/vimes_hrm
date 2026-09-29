@@ -509,4 +509,26 @@ ALTER TABLE user_google_accounts
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS due_date DATE;
 `,
   },
+  {
+    id: "013_dm_pair_key",
+    sql: `
+ALTER TABLE conversations
+  ADD COLUMN IF NOT EXISTS dm_pair_key TEXT;
+
+CREATE UNIQUE INDEX IF NOT EXISTS conversations_dm_pair_uidx
+  ON conversations (group_id, dm_pair_key)
+  WHERE type = 'DM' AND group_id IS NOT NULL AND dm_pair_key IS NOT NULL;
+`,
+  },
+  {
+    id: "014_google_chat_space_link_meta",
+    sql: `
+ALTER TABLE google_chat_spaces
+  ADD COLUMN IF NOT EXISTS linked_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS display_name TEXT,
+  ADD COLUMN IF NOT EXISTS space_type TEXT;
+CREATE INDEX IF NOT EXISTS google_chat_spaces_group_idx
+  ON google_chat_spaces (group_id) WHERE group_id IS NOT NULL;
+`,
+  },
 ];

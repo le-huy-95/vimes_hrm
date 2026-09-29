@@ -31,6 +31,7 @@ model User {
   deviceTokens   DeviceToken[]
   pushJobs       PushJob[]
   fileDownloads  FileDownloadAudit[]
+  googleChatSpacesLinked GoogleChatSpace[]
 
   @@map("users")
 }
@@ -235,6 +236,7 @@ model Conversation {
   groupId   String?  @map("group_id") @db.Uuid
   taskId    String?  @map("task_id") @db.Uuid
   title     String?
+  dmPairKey String?  @map("dm_pair_key")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   members  ConversationMember[]
@@ -454,14 +456,19 @@ model GoogleChatSpace {
   conversationId    String?  @map("conversation_id") @db.Uuid
   chatIngestEnabled Boolean  @default(false) @map("chat_ingest_enabled")
   status            String   @default("ACTIVE")
+  linkedByUserId    String?  @map("linked_by_user_id") @db.Uuid
+  displayName       String?  @map("display_name")
+  spaceType         String?  @map("space_type")
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  group        Group?            @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  conversation Conversation?     @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  group        Group?             @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  conversation Conversation?      @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  linkedBy     User?              @relation(fields: [linkedByUserId], references: [id], onDelete: SetNull)
   messages     GoogleMessageMap[]
   watch        ChatWatchState?
 
+  @@index([groupId], map: "google_chat_spaces_group_idx")
   @@map("google_chat_spaces")
 }
 
