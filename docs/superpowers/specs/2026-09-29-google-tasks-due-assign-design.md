@@ -77,7 +77,8 @@ Body (all optional):
 
 ### 6.2 Create / claim / assign
 
-- `POST .../tasks` — default `assigneeIds: []`, `allowClaim: true`, status **`TODO`**. Do **not** force-add creator.
+- `POST .../tasks` — default `assigneeIds: []`, `allowClaim: true`, status **`TODO`**. Do **not** force-add creator as assignee.
+- Task chat thread (`ensure-task`): still pass **creator** in `memberIds` even when not an assignee, so the thread is not empty; assignees are added when claimed/assigned (existing ensure behavior or follow-up if missing).
 - `POST .../claim` — unchanged; after success enqueue `TASKS_PUSH` for claimer (include `due` if set).
 - `POST .../assign` `{ userId }` — target must be group member (`NOT_GROUP_MEMBER`); enqueue push for target. Multi-assign = repeated calls or batch later; Flutter may call once per selected member.
 
