@@ -205,6 +205,29 @@ class CoreRepository {
     }
   }
 
+  Future<void> patchTask(
+    String groupId,
+    String code, {
+    String? title,
+    String? description,
+    String? dueDate,
+    bool clearDueDate = false,
+  }) async {
+    try {
+      await _api.dio.patch(
+        '/groups/$groupId/tasks/$code',
+        data: {
+          if (title != null) 'title': title,
+          if (description != null) 'description': description,
+          if (clearDueDate) 'dueDate': null,
+          if (!clearDueDate && dueDate != null) 'dueDate': dueDate,
+        },
+      );
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
   Future<void> assignTask(String groupId, String code, String userId) async {
     try {
       await _api.dio.post(

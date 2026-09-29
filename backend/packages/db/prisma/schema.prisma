@@ -1,0 +1,556 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email           String    @unique
+  passwordHash    String?   @map("password_hash")
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(6)
+  displayName     String?   @map("display_name")
+  tokenVersion    Int       @default(0) @map("token_version")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  googleAccounts UserGoogleAccount[]
+  refreshTokens  RefreshToken[]
+  orgMembers     OrgMember[]
+  invitationsSent OrgInvitation[] @relation("InvitedBy")
+  groupMembers   GroupMember[]
+  tasksCreated   Task[]           @relation("TaskCreatedBy")
+  taskAssignees  TaskAssignee[]
+  syncJobs       SyncJob[]
+  googleTaskLinks GoogleTaskLink[]
+  aiSessions     AiSession[]
+  aiAudit        AiAudit[]
+  deviceTokens   DeviceToken[]
+  pushJobs       PushJob[]
+  fileDownloads  FileDownloadAudit[]
+
+  @@map("users")
+}
+
+model UserGoogleAccount {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  googleSub       String   @unique @map("google_sub")
+  email           String?  @map("email")
+  accountType     String   @default("personal") @map("account_type")
+  refreshTokenEnc String?  @map("refresh_token_enc")
+  isPrimary       Boolean  @default(true) @map("is_primary")
+  linkedAt        DateTime @default(now()) @map("linked_at") @db.Timestamptz(6)
+  tasksSyncCursor DateTime? @map("tasks_sync_cursor") @db.Timestamptz(6)
+  tasksLastPullAt DateTime? @map("tasks_last_pull_at") @db.Timestamptz(6)
+  tasksPollIntervalS Int      @default(300) @map("tasks_poll_interval_s")
+  tasksNextPollAt DateTime? @map("tasks_next_poll_at") @db.Timestamptz(6)
+  tasksEmptyStreak Int      @default(0) @map("tasks_empty_streak")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, googleSub])
+  @@map("user_google_accounts")
+}
+
+model RefreshToken {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model OtpChallenge {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email      String
+  purpose    String
+  codeHash   String    @map("code_hash")
+  attempts   Int       @default(0)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("otp_challenges")
+}
+
+model Organization {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  members      OrgMember[]
+  invitations  OrgInvitation[]
+  groups       Group[]
+
+  @@map("organizations")
+}
+
+model OrgMember {
+  organizationId String @map("organization_id") @db.Uuid
+  userId         String @map("user_id") @db.Uuid
+  role           String
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([organizationId, userId])
+  @@map("org_members")
+}
+
+model OrgInvitation {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  email          String
+  role           String
+  tokenHash      String    @unique @map("token_hash")
+  invitedById    String    @map("invited_by") @db.Uuid
+  expiresAt      DateTime  @map("expires_at") @db.Timestamptz(6)
+  consumedAt     DateTime? @map("consumed_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    User         @relation("InvitedBy", fields: [invitedById], references: [id])
+
+  @@index([organizationId, email], map: "org_invitations_org_email_idx")
+  @@map("org_invitations")
+}
+
+model Group {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String
+  settings       Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      GroupMember[]
+  tasks        Task[]
+  sheet        GroupSheet?
+  driveWatches DriveWatchChannel[]
+  chatSpaces   GoogleChatSpace[]
+  embeddings   ContentEmbedding[]
+
+  @@map("groups")
+}
+
+model GroupMember {
+  groupId String @map("group_id") @db.Uuid
+  userId  String @map("user_id") @db.Uuid
+  role    String
+  status  String @default("ACTIVE")
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, userId])
+  @@map("group_members")
+}
+
+model Task {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId        String    @map("group_id") @db.Uuid
+  code           String
+  title          String
+  description    String?
+  status         String    @default("TODO")
+  completionMode String    @default("ANY") @map("completion_mode")
+  maxAssignees   Int?      @map("max_assignees")
+  allowClaim     Boolean   @default(true) @map("allow_claim")
+  version        Int       @default(1)
+  dueDate        DateTime? @map("due_date") @db.Date
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(6)
+  createdById    String?   @map("created_by") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  group     Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy User?          @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  assignees TaskAssignee[]
+  events    TaskEvent[]
+  googleLinks GoogleTaskLink[]
+
+  @@unique([groupId, code])
+  @@map("tasks")
+}
+
+model TaskAssignee {
+  taskId           String    @map("task_id") @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  status           String    @default("ACTIVE")
+  personalNote     String?   @map("personal_note")
+  completedAt      DateTime? @map("completed_at") @db.Timestamptz(6)
+  completedSource  String?   @map("completed_source")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@map("task_assignees")
+}
+
+model TaskEvent {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  taskId      String   @map("task_id") @db.Uuid
+  eventType   String   @map("event_type")
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  actorVia    String   @default("user") @map("actor_via")
+  payload     Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_events")
+}
+
+model Outbox {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  topic       String
+  payload     Json
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  publishedAt DateTime? @map("published_at") @db.Timestamptz(6)
+
+  @@map("outbox")
+}
+
+model ProcessedEvent {
+  eventId     String   @id @map("event_id") @db.Uuid
+  processedAt DateTime @default(now()) @map("processed_at") @db.Timestamptz(6)
+
+  @@map("processed_events")
+}
+
+model Conversation {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type      String
+  groupId   String?  @map("group_id") @db.Uuid
+  taskId    String?  @map("task_id") @db.Uuid
+  title     String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  members  ConversationMember[]
+  messages Message[]
+  chatSpaces GoogleChatSpace[]
+
+  @@map("conversations")
+}
+
+model ConversationMember {
+  conversationId String   @map("conversation_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  lastReadSeq    Int      @default(0) @map("last_read_seq")
+  status         String   @default("ACTIVE")
+  joinedAt       DateTime @default(now()) @map("joined_at") @db.Timestamptz(6)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@map("conversation_members")
+}
+
+model Message {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversationId String    @map("conversation_id") @db.Uuid
+  seq            Int
+  clientMsgId    String?   @map("client_msg_id")
+  senderUserId   String    @map("sender_user_id") @db.Uuid
+  body           String
+  origin         String    @default("APP")
+  replyToId      String?   @map("reply_to_id") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  editedAt       DateTime? @map("edited_at") @db.Timestamptz(6)
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  replyTo      Message?     @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies      Message[]    @relation("MessageReplies")
+  attachments  MessageAttachment[]
+  reactions    MessageReaction[]
+  googleMaps   GoogleMessageMap[]
+
+  @@unique([conversationId, seq])
+  @@unique([conversationId, clientMsgId])
+  @@index([conversationId, seq], map: "messages_conv_seq_idx")
+  @@map("messages")
+}
+
+model FileObject {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId         String?   @map("group_id") @db.Uuid
+  conversationId  String?   @map("conversation_id") @db.Uuid
+  uploaderUserId  String    @map("uploader_user_id") @db.Uuid
+  objectKey       String    @map("object_key")
+  originalName    String    @map("original_name")
+  contentType     String?   @map("content_type")
+  sizeBytes       BigInt    @default(0) @map("size_bytes")
+  sha256          String?
+  status          String    @default("UPLOADING")
+  scanStatus      String    @default("PENDING") @map("scan_status")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  readyAt         DateTime? @map("ready_at") @db.Timestamptz(6)
+  orphanAfter     DateTime  @map("orphan_after") @db.Timestamptz(6)
+
+  attachments MessageAttachment[]
+
+  downloads FileDownloadAudit[]
+
+  @@map("files")
+}
+
+model MessageAttachment {
+  messageId String @map("message_id") @db.Uuid
+  fileId    String @map("file_id") @db.Uuid
+
+  message Message    @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  file    FileObject @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, fileId])
+  @@map("message_attachments")
+}
+
+model MessageReaction {
+  messageId String   @map("message_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  emoji     String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, userId, emoji])
+  @@map("message_reactions")
+}
+
+/** Hàng đợi đồng bộ Google (Tasks/Sheets) — debounce + retry. */
+model SyncJob {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  jobType       String   @map("job_type")
+  aggregateType String   @map("aggregate_type")
+  aggregateId   String   @map("aggregate_id") @db.Uuid
+  payload       Json     @default("{}")
+  contentHash   String?  @map("content_hash")
+  status        String   @default("PENDING")
+  attempts      Int      @default(0)
+  nextRunAt     DateTime @default(now()) @map("next_run_at") @db.Timestamptz(6)
+  lastError     String?  @map("last_error")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sync_jobs")
+}
+
+/** Liên kết task nội bộ ↔ Google Task (một chiều Phase 2). */
+model GoogleTaskLink {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  taskId           String   @map("task_id") @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  googleTasklistId String   @map("google_tasklist_id")
+  googleTaskId     String   @map("google_task_id")
+  etag             String?
+  contentHash      String?  @map("content_hash")
+  fieldHashes      Json     @default("{}") @map("field_hashes")
+  status           String   @default("LINKED")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@unique([googleTasklistId, googleTaskId])
+  @@map("google_task_links")
+}
+
+model GroupSheet {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId         String    @unique @map("group_id") @db.Uuid
+  spreadsheetId   String?   @map("spreadsheet_id")
+  sheetTitle      String    @default("Tasks") @map("sheet_title")
+  driveFileId     String?   @map("drive_file_id")
+  status          String    @default("PENDING")
+  lastPushAt      DateTime? @map("last_push_at") @db.Timestamptz(6)
+  lastPullAt      DateTime? @map("last_pull_at") @db.Timestamptz(6)
+  contentHash     String?   @map("content_hash")
+  rowHashes       Json      @default("{}") @map("row_hashes")
+  writableColumns String[]  @default(["status", "personal_note"]) @map("writable_columns")
+  ownerUserId     String?   @map("owner_user_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@map("group_sheets")
+}
+
+model DriveWatchChannel {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId    String   @map("group_id") @db.Uuid
+  fileId     String   @map("file_id")
+  channelId  String   @unique @map("channel_id")
+  resourceId String?  @map("resource_id")
+  token      String
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(6)
+  status     String   @default("ACTIVE")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId], map: "drive_watch_channels_group_idx")
+  @@map("drive_watch_channels")
+}
+
+model GoogleChatEventDedupe {
+  eventId     String   @id @map("event_id")
+  processedAt DateTime @default(now()) @map("processed_at") @db.Timestamptz(6)
+
+  @@map("google_chat_event_dedupe")
+}
+
+model AiSession {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  title     String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  audit AiAudit[]
+
+  @@index([userId, updatedAt(sort: Desc)], map: "ai_sessions_user_idx")
+  @@map("ai_sessions")
+}
+
+model AiAudit {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  sessionId String?  @map("session_id") @db.Uuid
+  kind      String
+  payload   Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session AiSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt(sort: Desc)], map: "ai_audit_user_idx")
+  @@map("ai_audit")
+}
+
+model GoogleChatSpace {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  spaceName         String   @unique @map("space_name")
+  groupId           String?  @map("group_id") @db.Uuid
+  conversationId    String?  @map("conversation_id") @db.Uuid
+  chatIngestEnabled Boolean  @default(false) @map("chat_ingest_enabled")
+  status            String   @default("ACTIVE")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  group        Group?            @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  conversation Conversation?     @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  messages     GoogleMessageMap[]
+  watch        ChatWatchState?
+
+  @@map("google_chat_spaces")
+}
+
+model GoogleMessageMap {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  googleMessageName  String    @unique @map("google_message_name")
+  googleUpdateTime   DateTime? @map("google_update_time") @db.Timestamptz(6)
+  messageId          String    @map("message_id") @db.Uuid
+  spaceId            String?   @map("space_id") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  message Message          @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  space   GoogleChatSpace? @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+
+  @@map("google_message_map")
+}
+
+model ChatWatchState {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  spaceId     String    @unique @map("space_id") @db.Uuid
+  expireAt    DateTime? @map("expire_at") @db.Timestamptz(6)
+  status      String    @default("ACTIVE")
+  lastRenewAt DateTime? @map("last_renew_at") @db.Timestamptz(6)
+  lastEventAt DateTime? @map("last_event_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  space GoogleChatSpace @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  @@map("chat_watch_state")
+}
+
+model ContentEmbedding {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id") @db.Uuid
+  groupId    String?  @map("group_id") @db.Uuid
+  chunkText  String   @map("chunk_text")
+  embedding  Json     @default("[]")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  group Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([entityType, entityId])
+  @@index([groupId], map: "content_embeddings_group_idx")
+  @@map("content_embeddings")
+}
+
+model DeviceToken {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  platform  String
+  token     String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, token])
+  @@index([userId], map: "device_tokens_user_idx")
+  @@map("device_tokens")
+}
+
+model PushJob {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  kind      String
+  payload   Json     @default("{}")
+  status    String   @default("PENDING")
+  attempts  Int      @default(0)
+  lastError String?  @map("last_error")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_jobs")
+}
+
+model FileDownloadAudit {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fileId    String   @map("file_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  file FileObject @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([fileId, createdAt(sort: Desc)], map: "file_download_audit_file_idx")
+  @@map("file_download_audit")
+}

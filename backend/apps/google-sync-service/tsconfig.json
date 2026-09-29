@@ -5,15 +5,9 @@
     "rootDir": "src",
     "noUnusedLocals": false
   },
-  "include": [
-    "src/**/*"
-  ],
+  "include": ["src/**/*"],
   "references": [
-    {
-      "path": "../../packages/lib"
-    },
-    {
-      "path": "../../packages/db"
-    }
+    { "path": "../../packages/lib" },
+    { "path": "../../packages/db" }
   ]
 }

@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:manage_teams/core/models/api_models.dart';
 import 'package:manage_teams/core/skin/color_skin.dart';
+import 'package:manage_teams/features/home/data/core_repository.dart';
 import 'package:manage_teams/features/tasks/bloc/tasks_bloc.dart';
 import 'package:manage_teams/features/tasks/bloc/tasks_event.dart';
 import 'package:manage_teams/features/tasks/bloc/tasks_state.dart';
+import 'package:manage_teams/features/workspace/bloc/workspace_bloc.dart';
+import 'package:manage_teams/features/workspace/bloc/workspace_state.dart';
 import 'package:manage_teams/shared/snackbar/simple_snackbar_service.dart';
 import 'package:manage_teams/shared/widgets/app_button.dart';
-import 'package:manage_teams/shared/widgets/app_prompt_dialog.dart';
+import 'package:manage_teams/shared/widgets/app_text_field.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 class TasksTabPage extends StatelessWidget {
@@ -154,15 +157,114 @@ class TasksTabPage extends StatelessWidget {
   }
 
   Future<void> _create(BuildContext context) async {
-    final title = await showAppPromptDialog(
-      context,
-      title: 'Tạo task',
-      hint: 'Tiêu đề task',
-      label: 'Tiêu đề',
-      confirmLabel: 'Tạo',
+    final result = await showDialog<({String title, String description})>(
+      context: context,
+      builder: (ctx) => const _CreateTaskDialog(),
     );
-    if (title == null || title.trim().isEmpty || !context.mounted) return;
-    context.read<TasksBloc>().add(TasksCreateRequested(title));
+    if (result == null || result.title.trim().isEmpty || !context.mounted) {
+      return;
+    }
+    context.read<TasksBloc>().add(
+      TasksCreateRequested(
+        result.title,
+        description: result.description.trim().isEmpty
+            ? null
+            : result.description.trim(),
+      ),
+    );
+  }
+}
+
+class _CreateTaskDialog extends StatefulWidget {
+  const _CreateTaskDialog();
+
+  @override
+  State<_CreateTaskDialog> createState() => _CreateTaskDialogState();
+}
+
+class _CreateTaskDialogState extends State<_CreateTaskDialog> {
+  late final TextEditingController _title;
+  late final TextEditingController _details;
+
+  @override
+  void initState() {
+    super.initState();
+    _title = TextEditingController();
+    _details = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _details.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: ColorSkin.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Tạo task',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 16),
+              AppTextField(
+                label: 'Tiêu đề',
+                controller: _title,
+                hintText: 'Tiêu đề task',
+                required: true,
+              ),
+              const SizedBox(height: 12),
+              AppTextField(
+                label: 'Chi tiết',
+                controller: _details,
+                hintText: 'Mô tả / ghi chú (hiện trên Google Tasks)',
+                maxLines: 4,
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  AppButton(
+                    label: 'Hủy',
+                    height: 40,
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(width: 8),
+                  AppButton(
+                    label: 'Tạo',
+                    variant: AppButtonVariant.primary,
+                    height: 40,
+                    onPressed: () {
+                      final title = _title.text.trim();
+                      if (title.isEmpty) return;
+                      Navigator.pop(context, (
+                        title: title,
+                        description: _details.text,
+                      ));
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -334,6 +436,24 @@ class _TaskCard extends StatelessWidget {
               task.title,
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
+            if (task.dueDate != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Hạn: ${task.dueDate}',
+                style: const TextStyle(fontSize: 11, color: ColorSkin.title),
+              ),
+            ],
+            if (task.assignees.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                task.assignees
+                    .map((a) => a.displayName ?? a.email)
+                    .join(', '),
+                style: const TextStyle(fontSize: 11, color: Colors.black54),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ],
         ),
       ),
@@ -387,58 +507,252 @@ class _ListView extends StatelessWidget {
             itemBuilder: (context, i) {
               final t = tasks[i];
               final focused = t.id == focusTaskId;
-              return ListTile(
-                selected: focused,
-                selectedTileColor: ColorSkin.tealLight,
+              return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                color: focused ? ColorSkin.tealLight : null,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                   side: focused
                       ? const BorderSide(color: ColorSkin.primary, width: 2)
                       : BorderSide.none,
                 ),
-                title: Text('${t.code} — ${t.title}'),
-                subtitle: Text(t.status),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      tooltip: 'Assign userId',
-                      icon: const Icon(Icons.person_add_alt),
-                      onPressed: () async {
-                        final userId = await showAppPromptDialog(
-                          context,
-                          title: 'Assign',
-                          hint: 'userId UUID',
-                          label: 'User ID',
-                        );
-                        if (userId == null ||
-                            userId.trim().isEmpty ||
-                            !context.mounted) {
-                          return;
-                        }
-                        context.read<TasksBloc>().add(
-                          TasksAssignRequested(
-                            code: t.code,
-                            userId: userId.trim(),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${t.code} — ${t.title}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
-                        );
-                      },
-                    ),
-                    if (t.status == 'TODO')
-                      TextButton(
-                        onPressed: () => onClaim(t),
-                        child: const Text('Claim'),
-                      )
-                    else if (t.status == 'IN_PROGRESS')
-                      TextButton(
-                        onPressed: () => onComplete(t),
-                        child: const Text('Hoàn thành'),
+                          Text(
+                            t.status,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ],
                       ),
-                  ],
+                      const SizedBox(height: 8),
+                      _DueChips(task: t),
+                      const SizedBox(height: 6),
+                      _AssigneeRow(task: t, onClaim: onClaim),
+                      if (t.status == 'IN_PROGRESS')
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () => onComplete(t),
+                            child: const Text('Hoàn thành'),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               );
             },
           ),
+        ),
+      ],
+    );
+  }
+}
+
+String _ymd(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+DateTime? _parseDue(String? due) {
+  if (due == null || due.length < 10) return null;
+  try {
+    return DateTime.parse(due.substring(0, 10));
+  } catch (_) {
+    return null;
+  }
+}
+
+class _DueChips extends StatelessWidget {
+  const _DueChips({required this.task});
+  final TaskListItem task;
+
+  void _set(BuildContext context, String? due) {
+    context.read<TasksBloc>().add(
+      TasksDueDateRequested(code: task.code, dueDate: due),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: [
+        ActionChip(
+          label: const Text('Hôm nay'),
+          onPressed: () => _set(context, _ymd(today)),
+        ),
+        ActionChip(
+          label: const Text('Ngày mai'),
+          onPressed: () => _set(context, _ymd(tomorrow)),
+        ),
+        ActionChip(
+          avatar: const Icon(Icons.event, size: 16),
+          label: Text(task.dueDate ?? 'Chọn ngày'),
+          onPressed: () async {
+            final initial = _parseDue(task.dueDate) ?? today;
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: initial,
+              firstDate: DateTime(2020),
+              lastDate: DateTime(2035),
+            );
+            if (picked == null || !context.mounted) return;
+            _set(context, _ymd(picked));
+          },
+        ),
+        if (task.dueDate != null)
+          ActionChip(
+            label: const Text('Xóa hạn'),
+            onPressed: () => _set(context, null),
+          ),
+      ],
+    );
+  }
+}
+
+class _AssigneeRow extends StatelessWidget {
+  const _AssigneeRow({required this.task, required this.onClaim});
+  final TaskListItem task;
+  final ValueChanged<TaskListItem> onClaim;
+
+  @override
+  Widget build(BuildContext context) {
+    final names = task.assignees
+        .map((a) => a.displayName?.trim().isNotEmpty == true
+            ? a.displayName!
+            : a.email)
+        .toList();
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            names.isEmpty ? 'Chưa gán' : names.join(', '),
+            style: TextStyle(
+              fontSize: 12,
+              color: names.isEmpty ? Colors.black45 : Colors.black87,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        if (task.allowClaim &&
+            (task.status == 'TODO' || task.assignees.isEmpty))
+          TextButton(
+            onPressed: () => onClaim(task),
+            child: const Text('Claim'),
+          ),
+        TextButton(
+          onPressed: () => _openAssign(context),
+          child: const Text('Gán'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _openAssign(BuildContext context) async {
+    final bloc = context.read<TasksBloc>();
+    final core = context.read<CoreRepository>();
+    final ws = context.read<WorkspaceBloc>().state;
+    final groupId = ws is WorkspaceReady ? ws.selectedGroupId : null;
+    if (groupId == null) {
+      SimpleSnackbarService.showError('Chưa chọn nhóm');
+      return;
+    }
+    late final GroupDetail detail;
+    try {
+      detail = await core.getGroup(groupId);
+    } catch (e) {
+      SimpleSnackbarService.showError(e.toString());
+      return;
+    }
+    if (!context.mounted) return;
+    final assigned = task.assignees.map((a) => a.userId).toSet();
+    final candidates =
+        detail.members.where((m) => !assigned.contains(m.userId)).toList();
+    if (candidates.isEmpty) {
+      SimpleSnackbarService.showError('Không còn member để gán');
+      return;
+    }
+    final selected = await showDialog<List<String>>(
+      context: context,
+      builder: (ctx) => _AssignMembersDialog(members: candidates),
+    );
+    if (selected == null || selected.isEmpty || !context.mounted) return;
+    bloc.add(TasksAssignManyRequested(code: task.code, userIds: selected));
+  }
+}
+
+class _AssignMembersDialog extends StatefulWidget {
+  const _AssignMembersDialog({required this.members});
+  final List<GroupMember> members;
+
+  @override
+  State<_AssignMembersDialog> createState() => _AssignMembersDialogState();
+}
+
+class _AssignMembersDialogState extends State<_AssignMembersDialog> {
+  final _selected = <String>{};
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Gán người làm'),
+      content: SizedBox(
+        width: 360,
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            for (final m in widget.members)
+              CheckboxListTile(
+                value: _selected.contains(m.userId),
+                onChanged: (v) {
+                  setState(() {
+                    if (v == true) {
+                      _selected.add(m.userId);
+                    } else {
+                      _selected.remove(m.userId);
+                    }
+                  });
+                },
+                title: Text(
+                  m.displayName?.trim().isNotEmpty == true
+                      ? m.displayName!
+                      : m.email,
+                ),
+                subtitle: Text(m.email),
+                dense: true,
+              ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Hủy'),
+        ),
+        FilledButton(
+          onPressed: _selected.isEmpty
+              ? null
+              : () => Navigator.pop(context, _selected.toList()),
+          child: const Text('Gán'),
         ),
       ],
     );
@@ -461,10 +775,11 @@ class _CalendarView extends StatelessWidget {
 
   List<TaskListItem> _forDay(DateTime day) {
     return tasks.where((t) {
-      final local = t.createdAt.toLocal();
-      return local.year == day.year &&
-          local.month == day.month &&
-          local.day == day.day;
+      final due = _parseDue(t.dueDate);
+      if (due == null) return false;
+      return due.year == day.year &&
+          due.month == day.month &&
+          due.day == day.day;
     }).toList();
   }
 
@@ -518,7 +833,7 @@ class _CalendarView extends StatelessWidget {
               for (final t in _forDay(focusedDay))
                 ListTile(
                   title: Text('${t.code} — ${t.title}'),
-                  subtitle: Text('Tạo: ${t.createdAt.toLocal()} · ${t.status}'),
+                  subtitle: Text('Hạn: ${t.dueDate} · ${t.status}'),
                 ),
             ],
           ),

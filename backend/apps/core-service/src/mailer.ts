@@ -1,4 +1,5 @@
-const messagingUrl = process.env.MESSAGING_URL ?? "http://localhost:3206";
+const messagingUrl =
+  process.env.WORKER_URL ?? process.env.MESSAGING_URL ?? "http://localhost:3206";
 const internalToken = process.env.INTERNAL_SERVICE_TOKEN ?? "dev-internal-token";
 
 export async function sendOrgInviteEmail(body: {

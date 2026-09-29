@@ -1,5 +1,5 @@
 {
-  "name": "@manage-teams/core-service",
+  "name": "@manage-teams/google-sync-service",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -12,11 +12,10 @@
     "lint": "echo \"no lint yet\""
   },
   "dependencies": {
-    "@manage-teams/lib": "workspace:*",
-    "@manage-teams/contracts": "workspace:*",
     "@manage-teams/db": "workspace:*",
+    "@manage-teams/lib": "workspace:*",
     "express": "^4.21.2",
-    "jose": "^5.9.6",
+    "googleapis": "^144.0.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {

@@ -130,6 +130,7 @@ class TaskListItem {
     required this.createdAt,
     this.maxAssignees,
     this.description,
+    this.dueDate,
   });
 
   final String id;
@@ -142,9 +143,12 @@ class TaskListItem {
   final List<TaskAssigneeBrief> assignees;
   final DateTime createdAt;
   final String? description;
+  /// YYYY-MM-DD or null.
+  final String? dueDate;
 
   factory TaskListItem.fromJson(Map<String, dynamic> j) {
     final createdRaw = j['createdAt'] ?? j['created_at'];
+    final dueRaw = j['dueDate'] ?? j['due_date'];
     return TaskListItem(
       id: j['id'] as String,
       code: j['code'] as String,
@@ -154,6 +158,7 @@ class TaskListItem {
       allowClaim: j['allowClaim'] as bool? ?? true,
       maxAssignees: j['maxAssignees'] as int?,
       description: j['description'] as String?,
+      dueDate: dueRaw?.toString(),
       assignees: (j['assignees'] as List<dynamic>? ?? const [])
           .map((e) => TaskAssigneeBrief.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -166,6 +171,8 @@ class TaskListItem {
   TaskListItem copyWith({
     String? status,
     List<TaskAssigneeBrief>? assignees,
+    String? dueDate,
+    bool clearDueDate = false,
   }) {
     return TaskListItem(
       id: id,
@@ -178,6 +185,7 @@ class TaskListItem {
       assignees: assignees ?? this.assignees,
       createdAt: createdAt,
       description: description,
+      dueDate: clearDueDate ? null : (dueDate ?? this.dueDate),
     );
   }
 }
@@ -193,7 +201,7 @@ class ConversationItem {
   });
 
   final String id;
-  final String type; // GROUP | TASK
+  final String type; // GROUP | TASK_THREAD (alias TASK)
   final String? groupId;
   final String? taskId;
   final String? title;
@@ -334,5 +342,149 @@ class SyncStatus {
         recentJobs: (j['recentJobs'] as List<dynamic>? ?? const [])
             .map((e) => Map<String, dynamic>.from(e as Map))
             .toList(),
+      );
+}
+
+class GroupSheetDto {
+  const GroupSheetDto({
+    required this.id,
+    required this.groupId,
+    this.spreadsheetId,
+    required this.sheetTitle,
+    this.driveFileId,
+    required this.status,
+    this.lastPushAt,
+    this.lastPullAt,
+    this.contentHash,
+    required this.rowHashes,
+    required this.writableColumns,
+    this.ownerUserId,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String groupId;
+  final String? spreadsheetId;
+  final String sheetTitle;
+  final String? driveFileId;
+  final String status;
+  final DateTime? lastPushAt;
+  final DateTime? lastPullAt;
+  final String? contentHash;
+  final Map<String, String> rowHashes;
+  final List<String> writableColumns;
+  final String? ownerUserId;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  bool get isLocalMatrix =>
+      spreadsheetId == null || spreadsheetId!.startsWith('local-');
+
+  String? get googleSheetUrl => isLocalMatrix || spreadsheetId == null
+      ? null
+      : 'https://docs.google.com/spreadsheets/d/$spreadsheetId';
+
+  factory GroupSheetDto.fromJson(Map<String, dynamic> j) => GroupSheetDto(
+        id: j['id'] as String,
+        groupId: j['groupId'] as String,
+        spreadsheetId: j['spreadsheetId'] as String?,
+        sheetTitle: j['sheetTitle'] as String? ?? 'Tasks',
+        driveFileId: j['driveFileId'] as String?,
+        status: j['status'] as String,
+        lastPushAt: j['lastPushAt'] != null
+            ? DateTime.parse(j['lastPushAt'].toString())
+            : null,
+        lastPullAt: j['lastPullAt'] != null
+            ? DateTime.parse(j['lastPullAt'].toString())
+            : null,
+        contentHash: j['contentHash'] as String?,
+        rowHashes: Map<String, String>.from(
+          (j['rowHashes'] as Map?)?.map(
+                (k, v) => MapEntry(k.toString(), v.toString()),
+              ) ??
+              const {},
+        ),
+        writableColumns: (j['writableColumns'] as List? ?? const [])
+            .map((e) => e.toString())
+            .toList(),
+        ownerUserId: j['ownerUserId'] as String?,
+        createdAt: DateTime.parse(j['createdAt'].toString()),
+        updatedAt: DateTime.parse(j['updatedAt'].toString()),
+      );
+}
+
+class DriveWatchDto {
+  const DriveWatchDto({
+    required this.id,
+    required this.groupId,
+    required this.fileId,
+    required this.channelId,
+    this.resourceId,
+    required this.token,
+    required this.expiresAt,
+    required this.status,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String groupId;
+  final String fileId;
+  final String channelId;
+  final String? resourceId;
+  final String token;
+  final DateTime expiresAt;
+  final String status;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  factory DriveWatchDto.fromJson(Map<String, dynamic> j) => DriveWatchDto(
+        id: j['id'] as String,
+        groupId: j['groupId'] as String,
+        fileId: j['fileId'] as String,
+        channelId: j['channelId'] as String,
+        resourceId: j['resourceId'] as String?,
+        token: j['token'] as String,
+        expiresAt: DateTime.parse(j['expiresAt'].toString()),
+        status: j['status'] as String,
+        createdAt: DateTime.parse(j['createdAt'].toString()),
+        updatedAt: DateTime.parse(j['updatedAt'].toString()),
+      );
+}
+
+class SheetStatusResponse {
+  const SheetStatusResponse({this.sheet, required this.watches});
+
+  final GroupSheetDto? sheet;
+  final List<DriveWatchDto> watches;
+
+  factory SheetStatusResponse.fromJson(Map<String, dynamic> j) =>
+      SheetStatusResponse(
+        sheet: j['sheet'] == null
+            ? null
+            : GroupSheetDto.fromJson(j['sheet'] as Map<String, dynamic>),
+        watches: (j['watches'] as List? ?? const [])
+            .map((e) => DriveWatchDto.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
+class SheetsEnqueueResponse {
+  const SheetsEnqueueResponse({
+    required this.jobId,
+    required this.deduped,
+    this.debounceMs,
+  });
+
+  final String jobId;
+  final bool deduped;
+  final int? debounceMs;
+
+  factory SheetsEnqueueResponse.fromJson(Map<String, dynamic> j) =>
+      SheetsEnqueueResponse(
+        jobId: j['jobId'] as String,
+        deduped: j['deduped'] as bool? ?? false,
+        debounceMs: (j['debounceMs'] as num?)?.toInt(),
       );
 }

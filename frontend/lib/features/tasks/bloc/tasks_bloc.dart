@@ -21,6 +21,9 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     on<TasksCreateRequested>(_onCreate);
     on<TasksDragRequested>(_onDrag);
     on<TasksAssignRequested>(_onAssign);
+    on<TasksAssignManyRequested>(_onAssignMany);
+    on<TasksDueDateRequested>(_onDueDate);
+    on<TasksClaimRequested>(_onClaim);
     on<TasksFocusRequested>(_onFocus);
     on<TasksFocusCleared>(_onFocusCleared);
 
@@ -53,6 +56,14 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     TasksGroupChanged event,
     Emitter<TasksState> emit,
   ) async {
+    // Cùng group: soft refresh — tránh wipe UI giữa lúc đang tạo task.
+    if (event.groupId != null &&
+        event.groupId == _groupId &&
+        state is TasksReady) {
+      add(const TasksRefreshRequested());
+      return;
+    }
+
     _groupId = event.groupId;
     final prev = _ready;
     if (event.groupId == null) {
@@ -80,7 +91,19 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     TasksRefreshRequested event,
     Emitter<TasksState> emit,
   ) async {
-    add(TasksGroupChanged(_groupId));
+    if (_groupId == null) return;
+    final prev = _ready;
+    try {
+      final tasks = await _core.listTasks(_groupId!);
+      if (prev != null) {
+        emit(prev.copyWith(tasks: tasks, busy: false));
+      } else {
+        emit(TasksReady(tasks: tasks));
+      }
+    } catch (e) {
+      emit(TasksFailure(_msg(e), previous: prev));
+      if (prev != null) emit(prev.copyWith(busy: false));
+    }
   }
 
   Future<void> _onViewChanged(
@@ -132,7 +155,13 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     if (_groupId == null || prev == null) return;
     emit(prev.copyWith(busy: true));
     try {
-      await _core.createTask(_groupId!, title: event.title.trim());
+      await _core.createTask(
+        _groupId!,
+        title: event.title.trim(),
+        description: event.description?.trim().isEmpty == true
+            ? null
+            : event.description?.trim(),
+      );
       final tasks = await _core.listTasks(_groupId!);
       final next = prev.copyWith(tasks: tasks, busy: false);
       emit(TasksActionSuccess('Đã tạo task', ready: next));
@@ -198,6 +227,74 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
       final tasks = await _core.listTasks(_groupId!);
       final next = prev.copyWith(tasks: tasks, busy: false);
       emit(TasksActionSuccess('Đã assign', ready: next));
+      emit(next);
+    } catch (e) {
+      emit(TasksFailure(_msg(e), previous: prev));
+      emit(prev.copyWith(busy: false));
+    }
+  }
+
+  Future<void> _onAssignMany(
+    TasksAssignManyRequested event,
+    Emitter<TasksState> emit,
+  ) async {
+    final prev = _ready;
+    if (_groupId == null || prev == null) return;
+    if (event.userIds.isEmpty) return;
+    emit(prev.copyWith(busy: true));
+    try {
+      for (final uid in event.userIds) {
+        await _core.assignTask(_groupId!, event.code, uid.trim());
+      }
+      final tasks = await _core.listTasks(_groupId!);
+      final next = prev.copyWith(tasks: tasks, busy: false);
+      emit(TasksActionSuccess('Đã gán người', ready: next));
+      emit(next);
+    } catch (e) {
+      emit(TasksFailure(_msg(e), previous: prev));
+      emit(prev.copyWith(busy: false));
+    }
+  }
+
+  Future<void> _onDueDate(
+    TasksDueDateRequested event,
+    Emitter<TasksState> emit,
+  ) async {
+    final prev = _ready;
+    if (_groupId == null || prev == null) return;
+    emit(prev.copyWith(busy: true));
+    try {
+      await _core.patchTask(
+        _groupId!,
+        event.code,
+        dueDate: event.dueDate,
+        clearDueDate: event.dueDate == null,
+      );
+      final tasks = await _core.listTasks(_groupId!);
+      final next = prev.copyWith(tasks: tasks, busy: false);
+      emit(TasksActionSuccess(
+        event.dueDate == null ? 'Đã xóa hạn' : 'Đã đặt hạn',
+        ready: next,
+      ));
+      emit(next);
+    } catch (e) {
+      emit(TasksFailure(_msg(e), previous: prev));
+      emit(prev.copyWith(busy: false));
+    }
+  }
+
+  Future<void> _onClaim(
+    TasksClaimRequested event,
+    Emitter<TasksState> emit,
+  ) async {
+    final prev = _ready;
+    if (_groupId == null || prev == null) return;
+    emit(prev.copyWith(busy: true));
+    try {
+      await _core.claimTask(_groupId!, event.code);
+      final tasks = await _core.listTasks(_groupId!);
+      final next = prev.copyWith(tasks: tasks, busy: false);
+      emit(TasksActionSuccess('Đã nhận việc', ready: next));
       emit(next);
     } catch (e) {
       emit(TasksFailure(_msg(e), previous: prev));
