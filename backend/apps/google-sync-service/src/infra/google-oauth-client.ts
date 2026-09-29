@@ -19,7 +19,7 @@ export async function getGoogleOAuthForUser(
   });
   if (!account?.refreshTokenEnc) {
     throw new AppError(
-      "User chưa liên kết Google / thiếu refresh token",
+      "Chưa liên kết Google hoặc thiếu refresh token",
       "AUTH_REQUIRED",
       401,
     );
@@ -71,4 +71,8 @@ export function sheetsClient(auth: GoogleOAuth2) {
 
 export function driveClient(auth: GoogleOAuth2) {
   return google.drive({ version: "v3", auth });
+}
+
+export function chatClient(auth: GoogleOAuth2) {
+  return google.chat({ version: "v1", auth });
 }
