@@ -147,6 +147,7 @@ class CoreRepository {
     bool allowClaim = true,
     int? maxAssignees,
     List<String>? assigneeIds,
+    String? dueDate,
   }) async {
     try {
       final res = await _api.dio.post<Map<String, dynamic>>(
@@ -158,6 +159,7 @@ class CoreRepository {
           'allowClaim': allowClaim,
           if (maxAssignees != null) 'maxAssignees': maxAssignees,
           if (assigneeIds != null) 'assigneeIds': assigneeIds,
+          if (dueDate != null) 'dueDate': dueDate,
         },
       );
       final t = res.data?['task'] as Map<String, dynamic>? ?? {};
@@ -172,6 +174,7 @@ class CoreRepository {
         assignees: const [],
         createdAt: DateTime.now().toUtc(),
         description: description,
+        dueDate: dueDate,
       );
     } catch (e) {
       throw mapDioError(e);
@@ -212,6 +215,7 @@ class CoreRepository {
     String? description,
     String? dueDate,
     bool clearDueDate = false,
+    String? status,
   }) async {
     try {
       await _api.dio.patch(
@@ -221,6 +225,7 @@ class CoreRepository {
           if (description != null) 'description': description,
           if (clearDueDate) 'dueDate': null,
           if (!clearDueDate && dueDate != null) 'dueDate': dueDate,
+          if (status != null) 'status': status,
         },
       );
     } catch (e) {
@@ -233,6 +238,25 @@ class CoreRepository {
       await _api.dio.post(
         '/groups/$groupId/tasks/$code/assign',
         data: {'userId': userId},
+      );
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  Future<({bool leftGroup, List<Map<String, dynamic>> chatResults})> leaveGroup(
+    String groupId,
+  ) async {
+    try {
+      final res = await _api.dio.post<Map<String, dynamic>>(
+        '/groups/$groupId/leave',
+      );
+      final data = res.data ?? {};
+      return (
+        leftGroup: data['leftGroup'] == true,
+        chatResults: (data['chatResults'] as List<dynamic>? ?? [])
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList(),
       );
     } catch (e) {
       throw mapDioError(e);
