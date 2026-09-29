@@ -11,7 +11,9 @@ import 'package:manage_teams/features/ai/pages/ai_page.dart';
 import 'package:manage_teams/features/ai/widgets/ai_chat_view.dart';
 import 'package:manage_teams/features/auth/bloc/auth_bloc.dart';
 import 'package:manage_teams/features/auth/bloc/auth_event.dart';
-import 'package:manage_teams/features/shell/widgets/workspace_picker_bar.dart';
+import 'package:manage_teams/features/auth/widgets/app_logo.dart';
+import 'package:manage_teams/features/shell/widgets/account_switcher.dart';
+import 'package:manage_teams/features/shell/widgets/workspace_switcher.dart';
 import 'package:manage_teams/shared/snackbar/simple_snackbar_service.dart';
 
 class AppShell extends StatefulWidget {
@@ -30,7 +32,7 @@ class _AppShellState extends State<AppShell> {
     (label: 'Home', icon: Icons.home_outlined, selected: Icons.home),
     (label: 'Tasks', icon: Icons.view_kanban_outlined, selected: Icons.view_kanban),
     (label: 'Chat', icon: Icons.chat_bubble_outline, selected: Icons.chat_bubble),
-    (label: 'Sync', icon: Icons.sync_outlined, selected: Icons.sync),
+    (label: 'Sheets', icon: Icons.table_chart_outlined, selected: Icons.table_chart),
   ];
 
   void _openAi(bool wide) {
@@ -79,13 +81,7 @@ class _AppShellState extends State<AppShell> {
           titleSpacing: 16,
           title: Row(
             children: [
-              const Text(
-                'Vimes',
-                style: TextStyle(
-                  color: ColorSkin.primary,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+              const AppLogo(width: 36, height: 36),
               if (wide) ...[
                 const SizedBox(width: 24),
                 for (var i = 0; i < _tabs.length; i++)
@@ -107,7 +103,9 @@ class _AppShellState extends State<AppShell> {
                   ),
               ],
               const Spacer(),
-              const Flexible(child: WorkspacePickerBar(compact: true)),
+              const Flexible(child: AccountSwitcher()),
+              const SizedBox(width: 8),
+              const Flexible(child: WorkspaceSwitcher()),
               IconButton(
                 tooltip: 'Đăng xuất',
                 icon: const Icon(Icons.logout),
