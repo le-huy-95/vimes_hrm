@@ -53,9 +53,17 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: ColorSkin.primary,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(40),
+          ),
           textStyle: TypoSkin.buttonText1,
         ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: ColorSkin.white,
+        surfaceTintColor: ColorSkin.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       ),
     );
   }

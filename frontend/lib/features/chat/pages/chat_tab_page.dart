@@ -1,19 +1,21 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:manage_teams/core/models/api_models.dart';
 import 'package:manage_teams/core/skin/color_skin.dart';
+import 'package:go_router/go_router.dart';
+import 'package:manage_teams/app/router/app_router.dart';
 import 'package:manage_teams/features/chat/bloc/chat_list_bloc.dart';
 import 'package:manage_teams/features/chat/bloc/chat_list_event.dart';
 import 'package:manage_teams/features/chat/bloc/chat_list_state.dart';
 import 'package:manage_teams/features/chat/bloc/chat_thread_bloc.dart';
 import 'package:manage_teams/features/chat/bloc/chat_thread_event.dart';
 import 'package:manage_teams/features/chat/bloc/chat_thread_state.dart';
-import 'package:manage_teams/features/home/data/file_repository.dart';
+import 'package:manage_teams/features/home/data/core_repository.dart';
+import 'package:manage_teams/features/home/data/google_chat_repository.dart';
+import 'package:manage_teams/features/workspace/bloc/workspace_bloc.dart';
+import 'package:manage_teams/features/workspace/bloc/workspace_state.dart';
 import 'package:manage_teams/shared/snackbar/simple_snackbar_service.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-const _quickEmojis = ['👍', '❤️', '😂', '🎉', '👀'];
 
 class ChatTabPage extends StatelessWidget {
   const ChatTabPage({super.key});
@@ -34,9 +36,12 @@ class ChatTabPage extends StatelessWidget {
             if (state is ChatListFailure) {
               SimpleSnackbarService.showError(state.message);
             } else if (state is ChatListReady && state.selected != null) {
-              context
-                  .read<ChatThreadBloc>()
-                  .add(ChatThreadOpened(state.selected!.id));
+              final link = state.selected!;
+              context.read<ChatThreadBloc>().add(ChatThreadOpened(
+                    groupId: state.groupId,
+                    spaceName: link.spaceName,
+                    title: link.title,
+                  ));
             } else if (state is ChatListReady && state.selected == null) {
               context.read<ChatThreadBloc>().add(const ChatThreadClosed());
             }
@@ -46,6 +51,8 @@ class ChatTabPage extends StatelessWidget {
           listener: (context, state) {
             if (state is ChatThreadFailure) {
               SimpleSnackbarService.showError(state.message);
+            } else if (state is ChatThreadReady && state.taskWarning != null) {
+              SimpleSnackbarService.showError(state.taskWarning!);
             }
           },
         ),
@@ -58,7 +65,7 @@ class ChatTabPage extends StatelessWidget {
           if (wide) {
             return Row(
               children: [
-                SizedBox(width: 300, child: _ConversationList(listState)),
+                SizedBox(width: 320, child: _LinkList(listState)),
                 const VerticalDivider(width: 1),
                 const Expanded(child: _ThreadPane()),
               ],
@@ -66,7 +73,7 @@ class ChatTabPage extends StatelessWidget {
           }
 
           if (selected == null) {
-            return _ConversationList(listState);
+            return _LinkList(listState);
           }
 
           return Column(
@@ -78,7 +85,8 @@ class ChatTabPage extends StatelessWidget {
                       .read<ChatListBloc>()
                       .add(const ChatListClearSelection()),
                 ),
-                title: Text(selected.title ?? 'Chat'),
+                title: Text(selected.title),
+                subtitle: const Text('Google Chat'),
               ),
               const Expanded(child: _ThreadPane()),
             ],
@@ -89,13 +97,20 @@ class ChatTabPage extends StatelessWidget {
   }
 }
 
-class _ConversationList extends StatelessWidget {
-  const _ConversationList(this.state);
+class _LinkList extends StatelessWidget {
+  const _LinkList(this.state);
   final ChatListState state;
 
   @override
   Widget build(BuildContext context) {
     if (state is ChatListLoading || state is ChatListInitial) {
+      final ws = context.watch<WorkspaceBloc>().state;
+      if (ws is WorkspaceReady && ws.selectedGroupId == null) {
+        return const Center(child: Text('Chọn nhóm để xem Google Chat'));
+      }
+      if (state is ChatListInitial) {
+        return const Center(child: Text('Chọn nhóm để xem Google Chat'));
+      }
       return const Center(child: CircularProgressIndicator());
     }
     if (state is ChatListFailure) {
@@ -110,65 +125,267 @@ class _ConversationList extends StatelessWidget {
     if (state is! ChatListReady) return const SizedBox.shrink();
     final ready = state as ChatListReady;
 
-    return ListView(
+    if (!ready.readiness.isReady) {
+      return _ReadinessGate(ready);
+    }
+
+    return Column(
       children: [
-        const ListTile(
-          title: Text(
-            'NHÓM',
-            style: TextStyle(fontSize: 12, color: ColorSkin.subtitle),
+        ListTile(
+          title: const Text('Google Chat'),
+          subtitle: Text(
+            ready.links.isEmpty
+                ? 'Chưa liên kết space'
+                : '${ready.links.length} cuộc trò chuyện',
           ),
+          trailing: ready.busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : IconButton(
+                  tooltip: 'Làm mới',
+                  onPressed: () => context
+                      .read<ChatListBloc>()
+                      .add(const ChatListRefreshRequested()),
+                  icon: const Icon(Icons.refresh),
+                ),
         ),
-        if (ready.groupConversations.isEmpty)
-          const ListTile(title: Text('Chưa có chat nhóm')),
-        for (final c in ready.groupConversations)
-          ListTile(
-            selected: ready.selected?.id == c.id,
-            selectedTileColor: ColorSkin.tealLight,
-            title: Text(
-              c.title ?? '# Group',
-              style: const TextStyle(fontWeight: FontWeight.w700),
+        if (ready.links.isEmpty)
+          Expanded(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      ready.isAdmin
+                          ? 'Liên kết Google Chat space với nhóm này'
+                          : 'Chờ admin liên kết Google Chat',
+                      textAlign: TextAlign.center,
+                    ),
+                    if (ready.isAdmin) ...[
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        onPressed: () => _openLinkPicker(context, ready),
+                        icon: const Icon(Icons.link),
+                        label: const Text('Liên kết Google Chat'),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
-            onTap: () =>
-                context.read<ChatListBloc>().add(ChatListSelectRequested(c)),
-          ),
-        const ListTile(
-          title: Text(
-            'THEO TASK',
-            style: TextStyle(fontSize: 12, color: ColorSkin.subtitle),
-          ),
-        ),
-        if (ready.taskConversations.isEmpty)
-          const ListTile(title: Text('Chưa có chat task')),
-        for (final c in ready.taskConversations)
-          ListTile(
-            selected: ready.selected?.id == c.id,
-            title: Text(c.title ?? 'Task'),
-            onTap: () =>
-                context.read<ChatListBloc>().add(ChatListSelectRequested(c)),
+          )
+        else
+          Expanded(
+            child: ListView(
+              children: [
+                if (ready.isAdmin)
+                  ListTile(
+                    leading: const Icon(Icons.add_link),
+                    title: const Text('Thêm liên kết…'),
+                    onTap: () => _openLinkPicker(context, ready),
+                  ),
+                ...ready.links.map((link) {
+                  final selected = ready.selected?.id == link.id;
+                  return ListTile(
+                    selected: selected,
+                    leading: const Icon(Icons.chat_bubble_outline),
+                    title: Text(link.title),
+                    subtitle: Text(link.spaceType ?? 'SPACE'),
+                    trailing: ready.isAdmin
+                        ? IconButton(
+                            tooltip: 'Gỡ liên kết',
+                            icon: const Icon(Icons.link_off),
+                            onPressed: () => context
+                                .read<ChatListBloc>()
+                                .add(ChatListUnlinkRequested(link.id)),
+                          )
+                        : null,
+                    onTap: () => context
+                        .read<ChatListBloc>()
+                        .add(ChatListSelectLinkRequested(link)),
+                  );
+                }),
+              ],
+            ),
           ),
       ],
     );
   }
-}
 
-class _ThreadPane extends StatefulWidget {
-  const _ThreadPane();
-
-  @override
-  State<_ThreadPane> createState() => _ThreadPaneState();
-}
-
-class _ThreadPaneState extends State<_ThreadPane> {
-  final _body = TextEditingController();
-  final _search = TextEditingController();
-  bool _searchOpen = false;
-
-  @override
-  void dispose() {
-    _body.dispose();
-    _search.dispose();
-    super.dispose();
+  Future<void> _openLinkPicker(BuildContext context, ChatListReady ready) async {
+    final repo = context.read<GoogleChatRepository>();
+    SimpleSnackbarService.showInfo('Đang tải danh sách Google Chat…');
+    try {
+      final result = await repo.listSpaces();
+      if (!context.mounted) return;
+      if (!result.readiness.isReady) {
+        SimpleSnackbarService.showError(
+          result.readiness.reason ?? 'Google Chat chưa sẵn sàng',
+        );
+        return;
+      }
+      final linked = ready.links.map((l) => l.spaceName).toSet();
+      final picked = await showModalBottomSheet<List<GoogleChatSpaceItem>>(
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) => _SpacePickerSheet(
+          spaces: result.spaces,
+          alreadyLinked: linked,
+        ),
+      );
+      if (picked == null || picked.isEmpty || !context.mounted) return;
+      context.read<ChatListBloc>().add(ChatListLinkSpacesRequested(picked));
+    } catch (e) {
+      SimpleSnackbarService.showError(e.toString());
+    }
   }
+}
+
+class _ReadinessGate extends StatelessWidget {
+  const _ReadinessGate(this.ready);
+  final ChatListReady ready;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = ready.readiness.status;
+    final reason = ready.readiness.reason ?? '';
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              status == 'needs_reconsent'
+                  ? Icons.lock_outline
+                  : Icons.chat_bubble_outline,
+              size: 48,
+              color: ColorSkin.subtitle,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              status == 'needs_reconsent'
+                  ? 'Cần đăng nhập Google lại để cấp quyền Chat'
+                  : status == 'chat_disabled'
+                      ? 'Tài khoản chưa bật Google Chat'
+                      : 'Không kiểm tra được Google Chat',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            if (reason.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(reason, textAlign: TextAlign.center),
+            ],
+            const SizedBox(height: 20),
+            if (status == 'needs_reconsent')
+              FilledButton(
+                onPressed: () => context.push(AppRoutes.linkGoogle.path),
+                child: const Text('Liên kết Google lại'),
+              )
+            else if (status == 'chat_disabled') ...[
+              FilledButton(
+                onPressed: () => launchUrl(
+                  Uri.parse('https://chat.google.com'),
+                  mode: LaunchMode.externalApplication,
+                ),
+                child: const Text('Mở Google Chat'),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => context
+                    .read<ChatListBloc>()
+                    .add(const ChatListRefreshRequested()),
+                child: const Text('Đã bật, thử lại'),
+              ),
+            ] else
+              TextButton(
+                onPressed: () => context
+                    .read<ChatListBloc>()
+                    .add(const ChatListRefreshRequested()),
+                child: const Text('Thử lại'),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SpacePickerSheet extends StatefulWidget {
+  const _SpacePickerSheet({
+    required this.spaces,
+    required this.alreadyLinked,
+  });
+  final List<GoogleChatSpaceItem> spaces;
+  final Set<String> alreadyLinked;
+
+  @override
+  State<_SpacePickerSheet> createState() => _SpacePickerSheetState();
+}
+
+class _SpacePickerSheetState extends State<_SpacePickerSheet> {
+  final _selected = <String>{};
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.7,
+        child: Column(
+          children: [
+            const ListTile(title: Text('Chọn Google Chat space')),
+            Expanded(
+              child: ListView.builder(
+                itemCount: widget.spaces.length,
+                itemBuilder: (context, i) {
+                  final s = widget.spaces[i];
+                  final linked = widget.alreadyLinked.contains(s.name);
+                  final checked = _selected.contains(s.name);
+                  return CheckboxListTile(
+                    value: linked || checked,
+                    onChanged: linked
+                        ? null
+                        : (v) => setState(() {
+                              if (v == true) {
+                                _selected.add(s.name);
+                              } else {
+                                _selected.remove(s.name);
+                              }
+                            }),
+                    title: Text(s.displayName),
+                    subtitle: Text(linked ? 'Đã liên kết · ${s.spaceType}' : s.spaceType),
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: FilledButton(
+                onPressed: _selected.isEmpty
+                    ? null
+                    : () {
+                        final picked = widget.spaces
+                            .where((s) => _selected.contains(s.name))
+                            .toList();
+                        Navigator.pop(context, picked);
+                      },
+                child: Text('Liên kết (${_selected.length})'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ThreadPane extends StatelessWidget {
+  const _ThreadPane();
 
   @override
   Widget build(BuildContext context) {
@@ -176,328 +393,173 @@ class _ThreadPaneState extends State<_ThreadPane> {
       builder: (context, state) {
         if (state is ChatThreadInitial) {
           return const Center(
-            child: Text(
-              'Chọn hội thoại',
-              style: TextStyle(color: ColorSkin.subtitle),
-            ),
+            child: Text('Chọn một cuộc trò chuyện Google Chat'),
           );
         }
         if (state is ChatThreadLoading) {
           return const Center(child: CircularProgressIndicator());
         }
-
-        final ready = switch (state) {
-          ChatThreadReady() => state,
-          ChatThreadFailure(:final previous) => previous,
-          _ => null,
-        };
+        final ready = state is ChatThreadReady
+            ? state
+            : (state is ChatThreadFailure ? state.previous : null);
         if (ready == null) {
-          return const Center(child: Text('Không tải được tin nhắn'));
+          final msg = state is ChatThreadFailure ? state.message : 'Lỗi';
+          return Center(child: Text(msg));
         }
 
         return Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-              child: Row(
-                children: [
-                  if (_searchOpen)
-                    Expanded(
-                      child: TextField(
-                        controller: _search,
-                        autofocus: true,
-                        decoration: InputDecoration(
-                          hintText: 'Tìm tin (≥ 2 ký tự)…',
-                          isDense: true,
-                          border: const OutlineInputBorder(),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _search.clear();
-                              context
-                                  .read<ChatThreadBloc>()
-                                  .add(const ChatThreadClearSearch());
-                              setState(() => _searchOpen = false);
-                            },
+            if (MediaQuery.sizeOf(context).width >= 800)
+              ListTile(
+                title: Text(ready.title ?? ready.spaceName),
+                subtitle: const Text('Google Chat'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: 'Thêm công việc',
+                      icon: const Icon(Icons.task_alt),
+                      onPressed: ready.busy
+                          ? null
+                          : () => _openCreateTask(context, ready),
+                    ),
+                    IconButton(
+                      tooltip: 'Làm mới',
+                      icon: const Icon(Icons.refresh),
+                      onPressed: () => context
+                          .read<ChatThreadBloc>()
+                          .add(const ChatThreadRefreshRequested()),
+                    ),
+                  ],
+                ),
+              ),
+            if (MediaQuery.sizeOf(context).width < 800)
+              Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  tooltip: 'Thêm công việc',
+                  icon: const Icon(Icons.task_alt),
+                  onPressed: ready.busy
+                      ? null
+                      : () => _openCreateTask(context, ready),
+                ),
+              ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(12),
+                itemCount: ready.messages.length,
+                itemBuilder: (context, i) {
+                  final m = ready.messages[i];
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: ColorSkin.tealLight,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            m.sender.isEmpty ? '—' : m.sender,
+                            style: Theme.of(context).textTheme.labelMedium,
                           ),
-                        ),
-                        onChanged: (v) {
-                          context
-                              .read<ChatThreadBloc>()
-                              .add(ChatThreadSearchRequested(v));
-                        },
+                          const SizedBox(height: 4),
+                          Text(m.text),
+                          if (m.createTime != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              m.createTime!.toLocal().toString(),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ],
                       ),
-                    )
-                  else
-                    const Spacer(),
-                  IconButton(
-                    tooltip: 'Tìm tin',
-                    icon: Icon(
-                      _searchOpen ? Icons.search_off : Icons.search,
-                      color: ColorSkin.primary,
                     ),
-                    onPressed: () {
-                      if (_searchOpen) {
-                        _search.clear();
-                        context
-                            .read<ChatThreadBloc>()
-                            .add(const ChatThreadClearSearch());
-                      }
-                      setState(() => _searchOpen = !_searchOpen);
-                    },
-                  ),
-                ],
+                  );
+                },
               ),
             ),
-            if (ready.searching)
-              const LinearProgressIndicator(minHeight: 2),
-            if (ready.isSearching) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    '${ready.searchResults.length} kết quả cho “${ready.searchQuery}”',
-                    style: const TextStyle(
-                      color: ColorSkin.subtitle,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: ready.searchResults.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'Không tìm thấy tin phù hợp',
-                          style: TextStyle(color: ColorSkin.subtitle),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: ready.searchResults.length,
-                        itemBuilder: (context, i) {
-                          return _MessageBubble(
-                            message: ready.searchResults[i],
-                          );
-                        },
-                      ),
-              ),
-            ] else
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: ready.messages.length,
-                  itemBuilder: (context, i) {
-                    return _MessageBubble(message: ready.messages[i]);
-                  },
-                ),
-              ),
-            if (ready.busy)
-              const LinearProgressIndicator(minHeight: 2),
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Row(
-                children: [
-                  IconButton(
-                    tooltip: 'Đính kèm file',
-                    icon: const Icon(Icons.attach_file, color: ColorSkin.primary),
-                    onPressed: ready.busy ? null : () => _pickFile(context),
-                  ),
-                  Expanded(
-                    child: TextField(
-                      controller: _body,
-                      decoration: const InputDecoration(
-                        hintText: 'Tin nhắn…',
-                        border: OutlineInputBorder(),
-                      ),
-                      onSubmitted: (_) => _send(context),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.send, color: ColorSkin.primary),
-                    onPressed: ready.busy ? null : () => _send(context),
-                  ),
-                ],
-              ),
-            ),
+            if (ready.busy) const LinearProgressIndicator(minHeight: 2),
+            _Composer(enabled: !ready.busy),
           ],
         );
       },
     );
   }
 
-  void _send(BuildContext context) {
-    final text = _body.text.trim();
-    if (text.isEmpty) return;
-    _body.clear();
-    context.read<ChatThreadBloc>().add(ChatThreadSendRequested(text));
-  }
-
-  Future<void> _pickFile(BuildContext context) async {
-    final result = await FilePicker.platform.pickFiles(
-      withData: true,
-      type: FileType.any,
-    );
-    if (result == null || result.files.isEmpty || !context.mounted) return;
-    final file = result.files.first;
-    final bytes = file.bytes;
-    if (bytes == null) {
-      SimpleSnackbarService.showError('Không đọc được file');
-      return;
-    }
-    final caption = _body.text.trim();
-    _body.clear();
-    context.read<ChatThreadBloc>().add(
-          ChatThreadAttachRequested(
-            bytes: bytes,
-            fileName: file.name,
-            contentType: file.extension != null
-                ? _guessContentType(file.extension!)
-                : null,
-            caption: caption,
-          ),
-        );
-  }
-
-  String? _guessContentType(String ext) {
-    final e = ext.toLowerCase();
-    return switch (e) {
-      'png' => 'image/png',
-      'jpg' || 'jpeg' => 'image/jpeg',
-      'gif' => 'image/gif',
-      'webp' => 'image/webp',
-      'pdf' => 'application/pdf',
-      'txt' => 'text/plain',
-      _ => null,
-    };
-  }
-}
-
-class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message});
-  final ChatMessage message;
-
-  @override
-  Widget build(BuildContext context) {
-    final m = message;
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.sizeOf(context).width * 0.78,
-        ),
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-        decoration: BoxDecoration(
-          color: ColorSkin.tealLight,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (m.deleted)
-              const Text(
-                '(đã xóa)',
-                style: TextStyle(fontStyle: FontStyle.italic),
-              )
-            else ...[
-              if (m.body.isNotEmpty) Text(m.body),
-              if (m.fileIds.isNotEmpty) ...[
-                if (m.body.isNotEmpty) const SizedBox(height: 6),
-                for (final fileId in m.fileIds)
-                  _FileChip(fileId: fileId),
-              ],
-            ],
-            if (!m.deleted) ...[
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 4,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  for (final r in m.reactions)
-                    InkWell(
-                      onTap: () => context.read<ChatThreadBloc>().add(
-                            ChatThreadReactionToggled(
-                              messageId: m.id,
-                              emoji: r.emoji,
-                            ),
-                          ),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: r.me
-                              ? ColorSkin.primary.withValues(alpha: 0.15)
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: r.me
-                                ? ColorSkin.primary
-                                : ColorSkin.border1,
-                          ),
-                        ),
-                        child: Text(
-                          '${r.emoji} ${r.count}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight:
-                                r.me ? FontWeight.w700 : FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ),
-                  InkWell(
-                    onTap: () => _showReactionPicker(context, m.id),
-                    borderRadius: BorderRadius.circular(12),
-                    child: const Padding(
-                      padding: EdgeInsets.all(4),
-                      child: Icon(
-                        Icons.add_reaction_outlined,
-                        size: 18,
-                        color: ColorSkin.subtitle,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showReactionPicker(BuildContext context, String messageId) {
-    return showModalBottomSheet<void>(
+  Future<void> _openCreateTask(
+    BuildContext context,
+    ChatThreadReady ready,
+  ) async {
+    final core = context.read<CoreRepository>();
+    final detail = await core.getGroup(ready.groupId);
+    if (!context.mounted) return;
+    final result = await showDialog<_CreateTaskResult>(
       context: context,
-      showDragHandle: true,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      builder: (ctx) => _CreateTaskDialog(members: detail.members),
+    );
+    if (result == null || !context.mounted) return;
+    context.read<ChatThreadBloc>().add(ChatThreadCreateTaskRequested(
+          title: result.title,
+          assigneeIds: result.assigneeIds,
+          dueDate: result.dueDate,
+        ));
+  }
+}
+
+class _Composer extends StatefulWidget {
+  const _Composer({required this.enabled});
+  final bool enabled;
+
+  @override
+  State<_Composer> createState() => _ComposerState();
+}
+
+class _ComposerState extends State<_Composer> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _send() {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+    context.read<ChatThreadBloc>().add(ChatThreadSendRequested(text));
+    _controller.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            for (final emoji in _quickEmojis)
-              InkWell(
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.read<ChatThreadBloc>().add(
-                        ChatThreadReactionToggled(
-                          messageId: messageId,
-                          emoji: emoji,
-                        ),
-                      );
-                },
-                borderRadius: BorderRadius.circular(24),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Text(emoji, style: const TextStyle(fontSize: 28)),
+            Expanded(
+              child: TextField(
+                controller: _controller,
+                enabled: widget.enabled,
+                minLines: 1,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  hintText: 'Nhắn trên Google Chat…',
+                  border: OutlineInputBorder(),
+                  isDense: true,
                 ),
+                onSubmitted: (_) => _send(),
               ),
+            ),
+            const SizedBox(width: 8),
+            IconButton.filled(
+              onPressed: widget.enabled ? _send : null,
+              icon: const Icon(Icons.send),
+            ),
           ],
         ),
       ),
@@ -505,62 +567,120 @@ class _MessageBubble extends StatelessWidget {
   }
 }
 
-class _FileChip extends StatelessWidget {
-  const _FileChip({required this.fileId});
-  final String fileId;
+class _CreateTaskResult {
+  const _CreateTaskResult({
+    required this.title,
+    required this.assigneeIds,
+    this.dueDate,
+  });
+  final String title;
+  final List<String> assigneeIds;
+  final String? dueDate;
+}
+
+class _CreateTaskDialog extends StatefulWidget {
+  const _CreateTaskDialog({required this.members});
+  final List<GroupMember> members;
+
+  @override
+  State<_CreateTaskDialog> createState() => _CreateTaskDialogState();
+}
+
+class _CreateTaskDialogState extends State<_CreateTaskDialog> {
+  final _title = TextEditingController();
+  final _selected = <String>{};
+  DateTime? _due;
+
+  @override
+  void dispose() {
+    _title.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 2),
-      child: InkWell(
-        onTap: () => _open(context),
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: ColorSkin.border1),
-          ),
-          child: Row(
+    return AlertDialog(
+      title: const Text('Thêm công việc'),
+      content: SizedBox(
+        width: 400,
+        child: SingleChildScrollView(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.insert_drive_file_outlined,
-                  size: 16, color: ColorSkin.primary),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  'Tệp ${fileId.substring(0, fileId.length.clamp(0, 8))}…',
-                  style: const TextStyle(
-                    color: ColorSkin.primary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+              TextField(
+                controller: _title,
+                decoration: const InputDecoration(
+                  labelText: 'Tiêu đề',
+                  border: OutlineInputBorder(),
                 ),
               ),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  _due == null
+                      ? 'Hạn (tuỳ chọn)'
+                      : 'Hạn: ${_due!.toIso8601String().substring(0, 10)}',
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.calendar_today),
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                      lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
+                    );
+                    if (picked != null) setState(() => _due = picked);
+                  },
+                ),
+              ),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Giao cho'),
+              ),
+              ...widget.members.map((m) {
+                final label = (m.displayName?.trim().isNotEmpty == true)
+                    ? m.displayName!
+                    : (m.email.isNotEmpty ? m.email : m.userId);
+                return CheckboxListTile(
+                  dense: true,
+                  value: _selected.contains(m.userId),
+                  onChanged: (v) => setState(() {
+                    if (v == true) {
+                      _selected.add(m.userId);
+                    } else {
+                      _selected.remove(m.userId);
+                    }
+                  }),
+                  title: Text(label),
+                );
+              }),
             ],
           ),
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Huỷ'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final title = _title.text.trim();
+            if (title.isEmpty) return;
+            Navigator.pop(
+              context,
+              _CreateTaskResult(
+                title: title,
+                assigneeIds: _selected.toList(),
+                dueDate: _due?.toIso8601String().substring(0, 10),
+              ),
+            );
+          },
+          child: const Text('Tạo'),
+        ),
+      ],
     );
-  }
-
-  Future<void> _open(BuildContext context) async {
-    try {
-      final url = await context.read<FileRepository>().downloadUrl(fileId);
-      if (url.isEmpty) {
-        SimpleSnackbarService.showError('Không lấy được link tải');
-        return;
-      }
-      final uri = Uri.parse(url);
-      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      if (!ok) {
-        SimpleSnackbarService.showError('Không mở được file');
-      }
-    } catch (e) {
-      SimpleSnackbarService.showError(e.toString());
-    }
   }
 }

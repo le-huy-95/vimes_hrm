@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:equatable/equatable.dart';
 
 sealed class ChatThreadEvent extends Equatable {
@@ -9,10 +7,16 @@ sealed class ChatThreadEvent extends Equatable {
 }
 
 class ChatThreadOpened extends ChatThreadEvent {
-  const ChatThreadOpened(this.conversationId);
-  final String conversationId;
+  const ChatThreadOpened({
+    required this.groupId,
+    required this.spaceName,
+    this.title,
+  });
+  final String groupId;
+  final String spaceName;
+  final String? title;
   @override
-  List<Object?> get props => [conversationId];
+  List<Object?> get props => [groupId, spaceName, title];
 }
 
 class ChatThreadClosed extends ChatThreadEvent {
@@ -20,55 +24,25 @@ class ChatThreadClosed extends ChatThreadEvent {
 }
 
 class ChatThreadSendRequested extends ChatThreadEvent {
-  const ChatThreadSendRequested(this.body, {this.fileIds});
+  const ChatThreadSendRequested(this.body);
   final String body;
-  final List<String>? fileIds;
   @override
-  List<Object?> get props => [body, fileIds];
+  List<Object?> get props => [body];
 }
 
-class ChatThreadAttachRequested extends ChatThreadEvent {
-  const ChatThreadAttachRequested({
-    required this.bytes,
-    required this.fileName,
-    this.contentType,
-    this.caption = '',
+class ChatThreadRefreshRequested extends ChatThreadEvent {
+  const ChatThreadRefreshRequested();
+}
+
+class ChatThreadCreateTaskRequested extends ChatThreadEvent {
+  const ChatThreadCreateTaskRequested({
+    required this.title,
+    this.assigneeIds = const [],
+    this.dueDate,
   });
-
-  final Uint8List bytes;
-  final String fileName;
-  final String? contentType;
-  final String caption;
-
+  final String title;
+  final List<String> assigneeIds;
+  final String? dueDate;
   @override
-  List<Object?> get props => [fileName, bytes.length, contentType, caption];
-}
-
-class ChatThreadReactionToggled extends ChatThreadEvent {
-  const ChatThreadReactionToggled({
-    required this.messageId,
-    required this.emoji,
-  });
-  final String messageId;
-  final String emoji;
-  @override
-  List<Object?> get props => [messageId, emoji];
-}
-
-class ChatThreadSearchRequested extends ChatThreadEvent {
-  const ChatThreadSearchRequested(this.query);
-  final String query;
-  @override
-  List<Object?> get props => [query];
-}
-
-class ChatThreadClearSearch extends ChatThreadEvent {
-  const ChatThreadClearSearch();
-}
-
-class ChatThreadSocketMessage extends ChatThreadEvent {
-  const ChatThreadSocketMessage(this.raw);
-  final Map<String, dynamic> raw;
-  @override
-  List<Object?> get props => [raw];
+  List<Object?> get props => [title, assigneeIds, dueDate];
 }

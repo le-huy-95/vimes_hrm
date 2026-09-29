@@ -57,6 +57,50 @@ class _WorkspaceSwitcherState extends State<WorkspaceSwitcher> {
     }
   }
 
+  Future<void> _leaveGroup(WorkspaceReady state) async {
+    final groupId = state.selectedGroupId;
+    if (groupId == null || _busy) return;
+    _menu.close();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Rời nhóm'),
+        content: const Text(
+          'Bạn sẽ rời nhóm trong app và cố gắng rời các Google Chat space đã liên kết.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Huỷ'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Rời nhóm'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      final result = await context.read<CoreRepository>().leaveGroup(groupId);
+      if (!mounted) return;
+      context.read<WorkspaceBloc>().add(const WorkspaceRefreshRequested());
+      SimpleSnackbarService.showSuccess('Đã rời nhóm');
+      final failed = result.chatResults.where((r) => r['ok'] != true).toList();
+      if (failed.isNotEmpty) {
+        SimpleSnackbarService.showWarning(
+          'Một số Google Chat space chưa rời được — kiểm tra trên Google Chat.',
+        );
+      }
+    } catch (e) {
+      final message = e is ApiException ? e.message : e.toString();
+      SimpleSnackbarService.showError(message);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _createGroup(WorkspaceReady state) async {
     if (_busy) return;
     final orgId = state.selectedOrgId;
@@ -247,6 +291,19 @@ class _WorkspaceSwitcherState extends State<WorkspaceSwitcher> {
                       ),
                     ),
                   ),
+                  if (state.selectedGroupId != null) ...[
+                    const Divider(height: 1),
+                    MenuItemButton(
+                      onPressed: _busy ? null : () => _leaveGroup(state),
+                      child: const Text(
+                        'Rời nhóm',
+                        style: TextStyle(
+                          color: ColorSkin.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
           builder: (context, controller, child) {
             return Material(

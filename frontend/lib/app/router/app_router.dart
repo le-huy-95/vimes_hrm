@@ -18,10 +18,8 @@ import 'package:manage_teams/features/chat/bloc/chat_thread_bloc.dart';
 import 'package:manage_teams/features/chat/pages/chat_tab_page.dart';
 import 'package:manage_teams/features/home/bloc/home_bloc.dart';
 import 'package:manage_teams/features/home/bloc/home_event.dart';
-import 'package:manage_teams/features/home/data/chat_repository.dart';
-import 'package:manage_teams/features/home/data/chat_socket_service.dart';
 import 'package:manage_teams/features/home/data/core_repository.dart';
-import 'package:manage_teams/features/home/data/file_repository.dart';
+import 'package:manage_teams/features/home/data/google_chat_repository.dart';
 import 'package:manage_teams/features/home/data/sync_repository.dart';
 import 'package:manage_teams/features/home/pages/home_tab_page.dart';
 import 'package:manage_teams/features/shell/pages/app_shell.dart';
@@ -194,20 +192,25 @@ GoRouter createAppRouter(AuthBloc authBloc) {
                 )..add(const TasksStarted()),
               ),
               BlocProvider(
-                create: (ctx) => ChatListBloc(
-                  ctx.read<ChatRepository>(),
-                  ctx.read<CoreRepository>(),
-                  ctx.read<WorkspaceBloc>(),
-                )..add(const ChatListStarted()),
+                create: (ctx) {
+                  final auth = authBloc.state;
+                  final userId =
+                      auth is AuthAuthenticated ? auth.user.id : null;
+                  return ChatListBloc(
+                    ctx.read<GoogleChatRepository>(),
+                    ctx.read<CoreRepository>(),
+                    ctx.read<WorkspaceBloc>(),
+                    currentUserId: userId,
+                  )..add(const ChatListStarted());
+                },
               ),
               BlocProvider(
                 create: (ctx) {
                   final auth = authBloc.state;
                   final userId = auth is AuthAuthenticated ? auth.user.id : null;
                   return ChatThreadBloc(
-                    ctx.read<ChatRepository>(),
-                    ctx.read<ChatSocketService>(),
-                    ctx.read<FileRepository>(),
+                    ctx.read<GoogleChatRepository>(),
+                    ctx.read<CoreRepository>(),
                     currentUserId: userId,
                   );
                 },

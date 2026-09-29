@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:manage_teams/core/models/api_models.dart';
+import 'package:manage_teams/features/home/data/google_chat_repository.dart';
 
 sealed class ChatThreadState extends Equatable {
   const ChatThreadState();
@@ -17,45 +17,41 @@ class ChatThreadLoading extends ChatThreadState {
 
 class ChatThreadReady extends ChatThreadState {
   const ChatThreadReady({
-    required this.conversationId,
+    required this.groupId,
+    required this.spaceName,
     required this.messages,
+    this.title,
     this.busy = false,
-    this.searchQuery = '',
-    this.searchResults = const [],
-    this.searching = false,
+    this.taskWarning,
   });
 
-  final String conversationId;
-  final List<ChatMessage> messages;
+  final String groupId;
+  final String spaceName;
+  final String? title;
+  final List<GoogleChatMessage> messages;
   final bool busy;
-  final String searchQuery;
-  final List<ChatMessage> searchResults;
-  final bool searching;
-
-  bool get isSearching => searchQuery.trim().length >= 2;
+  final String? taskWarning;
 
   ChatThreadReady copyWith({
-    List<ChatMessage>? messages,
+    List<GoogleChatMessage>? messages,
     bool? busy,
-    String? searchQuery,
-    List<ChatMessage>? searchResults,
-    bool? searching,
-    bool clearSearch = false,
+    String? title,
+    String? taskWarning,
+    bool clearTaskWarning = false,
   }) {
     return ChatThreadReady(
-      conversationId: conversationId,
+      groupId: groupId,
+      spaceName: spaceName,
+      title: title ?? this.title,
       messages: messages ?? this.messages,
       busy: busy ?? this.busy,
-      searchQuery: clearSearch ? '' : (searchQuery ?? this.searchQuery),
-      searchResults:
-          clearSearch ? const [] : (searchResults ?? this.searchResults),
-      searching: clearSearch ? false : (searching ?? this.searching),
+      taskWarning: clearTaskWarning ? null : (taskWarning ?? this.taskWarning),
     );
   }
 
   @override
   List<Object?> get props =>
-      [conversationId, messages, busy, searchQuery, searchResults, searching];
+      [groupId, spaceName, title, messages, busy, taskWarning];
 }
 
 class ChatThreadFailure extends ChatThreadState {

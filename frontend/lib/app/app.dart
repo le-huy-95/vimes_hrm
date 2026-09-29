@@ -19,6 +19,7 @@ import 'package:manage_teams/features/home/data/chat_socket_service.dart';
 import 'package:manage_teams/features/home/data/core_repository.dart';
 import 'package:manage_teams/features/home/data/device_repository.dart';
 import 'package:manage_teams/features/home/data/file_repository.dart';
+import 'package:manage_teams/features/home/data/google_chat_repository.dart';
 import 'package:manage_teams/features/home/data/sync_repository.dart';
 import 'package:manage_teams/shared/snackbar/simple_snackbar_service.dart';
 
@@ -35,13 +36,24 @@ class _ManageTeamsAppState extends State<ManageTeamsApp> {
   late final DeviceRepository _devices = DeviceRepository(_api);
   late final PushTokenService _push = PushTokenService(_devices);
   late final AiRepository _aiRepo = AiRepository(_api);
-  late final AuthBloc _authBloc = AuthBloc(_authRepo)
-    ..add(const AuthBootstrapRequested());
+  late final AuthBloc _authBloc = AuthBloc(_authRepo);
   late final AiBloc _aiBloc = AiBloc(_aiRepo)..add(const AiStarted());
   late final GoRouter _router = createAppRouter(_authBloc);
 
   @override
+  void initState() {
+    super.initState();
+    _api.onSessionExpired = () {
+      if (!_authBloc.isClosed) {
+        _authBloc.add(const AuthLogoutRequested());
+      }
+    };
+    _authBloc.add(const AuthBootstrapRequested());
+  }
+
+  @override
   void dispose() {
+    _api.onSessionExpired = null;
     _aiBloc.close();
     _authBloc.close();
     super.dispose();
@@ -58,6 +70,7 @@ class _ManageTeamsAppState extends State<ManageTeamsApp> {
         RepositoryProvider.value(value: _aiRepo),
         RepositoryProvider(create: (_) => CoreRepository(_api)),
         RepositoryProvider(create: (_) => ChatRepository(_api)),
+        RepositoryProvider(create: (_) => GoogleChatRepository(_api)),
         RepositoryProvider(create: (_) => FileRepository(_api)),
         RepositoryProvider(create: (_) => SyncRepository(_api)),
         RepositoryProvider(
