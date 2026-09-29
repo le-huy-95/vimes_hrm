@@ -12,10 +12,7 @@ import 'package:manage_teams/features/workspace/bloc/workspace_state.dart';
 import 'package:manage_teams/shared/snackbar/simple_snackbar_service.dart';
 import 'package:manage_teams/shared/widgets/app_text_field.dart';
 
-Future<void> showTaskDetailDialog(
-  BuildContext context,
-  TaskListItem task,
-) {
+Future<void> showTaskDetailDialog(BuildContext context, TaskListItem task) {
   final bloc = context.read<TasksBloc>();
   return showDialog<void>(
     context: context,
@@ -147,9 +144,7 @@ class _TaskDetailDialogState extends State<TaskDetailDialog> {
             child: const Text('Huỷ'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: ColorSkin.error,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: ColorSkin.error),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Xóa'),
           ),
@@ -173,131 +168,140 @@ class _TaskDetailDialogState extends State<TaskDetailDialog> {
         );
       },
       child: BlocBuilder<TasksBloc, TasksState>(
-      builder: (context, state) {
-        final task = _resolve(state);
-        final busy = _readyOf(state)?.busy == true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          _syncControllers(task);
-        });
+        builder: (context, state) {
+          final task = _resolve(state);
+          final busy = _readyOf(state)?.busy == true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            _syncControllers(task);
+          });
 
-        return AlertDialog(
-          title: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  task.code,
-                  style: const TextStyle(
-                    color: ColorSkin.primary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
+          return AlertDialog(
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    task.code,
+                    style: const TextStyle(
+                      color: ColorSkin.primary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-              if (busy)
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                if (busy)
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                IconButton(
+                  tooltip: 'Đóng',
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close),
                 ),
-              IconButton(
-                tooltip: 'Đóng',
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close),
+              ],
+            ),
+            content: SizedBox(
+              width: 420,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Focus(
+                      onFocusChange: (has) {
+                        if (!has) _saveTitle(task);
+                      },
+                      child: AppTextField(controller: _title, label: 'Tiêu đề'),
+                    ),
+                    const SizedBox(height: 12),
+                    Focus(
+                      onFocusChange: (has) {
+                        if (!has) _saveNotes(task);
+                      },
+                      child: AppTextField(
+                        controller: _notes,
+                        label: 'Ghi chú',
+                        maxLines: 4,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Hạn chót',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    _DueSection(task: task, ymd: _ymd, parseDue: _parseDue),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Trạng thái',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        for (final s in const [
+                          ('TODO', 'Todo'),
+                          ('IN_PROGRESS', 'Đang làm'),
+                          ('DONE', 'Hoàn thành'),
+                        ])
+                          ChoiceChip(
+                            label: Text(s.$2),
+                            selected: task.status == s.$1,
+                            onSelected: (_) {
+                              if (task.status == s.$1) return;
+                              context.read<TasksBloc>().add(
+                                TasksPatchRequested(
+                                  code: task.code,
+                                  status: s.$1,
+                                ),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Người làm',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    _AssigneeSection(task: task),
+                    if (task.isRoot) ...[
+                      const SizedBox(height: 16),
+                      _SubtasksSection(
+                        parent: task,
+                        allTasks: _readyOf(state)?.tasks ?? const [],
+                        newSubtaskController: _newSubtask,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton.icon(
+                onPressed: busy ? null : () => _confirmDelete(context, task),
+                icon: const Icon(Icons.delete_outline, color: ColorSkin.error),
+                label: const Text(
+                  'Xóa công việc',
+                  style: TextStyle(color: ColorSkin.error),
+                ),
               ),
             ],
-          ),
-          content: SizedBox(
-            width: 420,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Focus(
-                    onFocusChange: (has) {
-                      if (!has) _saveTitle(task);
-                    },
-                    child: AppTextField(
-                      controller: _title,
-                      label: 'Tiêu đề',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Focus(
-                    onFocusChange: (has) {
-                      if (!has) _saveNotes(task);
-                    },
-                    child: AppTextField(
-                      controller: _notes,
-                      label: 'Ghi chú',
-                      maxLines: 4,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Hạn chót',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                  ),
-                  const SizedBox(height: 6),
-                  _DueSection(task: task, ymd: _ymd, parseDue: _parseDue),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Trạng thái',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      for (final s in const [
-                        ('TODO', 'Todo'),
-                        ('IN_PROGRESS', 'Đang làm'),
-                        ('DONE', 'Hoàn thành'),
-                      ])
-                        ChoiceChip(
-                          label: Text(s.$2),
-                          selected: task.status == s.$1,
-                          onSelected: (_) {
-                            if (task.status == s.$1) return;
-                            context.read<TasksBloc>().add(
-                              TasksPatchRequested(code: task.code, status: s.$1),
-                            );
-                          },
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Người làm',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                  ),
-                  const SizedBox(height: 6),
-                  _AssigneeSection(task: task),
-                  if (task.isRoot) ...[
-                    const SizedBox(height: 16),
-                    _SubtasksSection(
-                      parent: task,
-                      allTasks: _readyOf(state)?.tasks ?? const [],
-                      newSubtaskController: _newSubtask,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton.icon(
-              onPressed: busy ? null : () => _confirmDelete(context, task),
-              icon: const Icon(Icons.delete_outline, color: ColorSkin.error),
-              label: const Text(
-                'Xóa công việc',
-                style: TextStyle(color: ColorSkin.error),
-              ),
-            ),
-          ],
-        );
-      },
+          );
+        },
       ),
     );
   }
@@ -501,8 +505,9 @@ class _AssigneeSection extends StatelessWidget {
     }
     if (!context.mounted) return;
     final assigned = task.assignees.map((a) => a.userId).toSet();
-    final candidates =
-        detail.members.where((m) => !assigned.contains(m.userId)).toList();
+    final candidates = detail.members
+        .where((m) => !assigned.contains(m.userId))
+        .toList();
     if (candidates.isEmpty) {
       SimpleSnackbarService.showError('Không còn thành viên để gán');
       return;
