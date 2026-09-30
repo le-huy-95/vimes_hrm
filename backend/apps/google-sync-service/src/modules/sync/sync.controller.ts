@@ -20,6 +20,7 @@ import { reconcileStaleLinks } from "./reconcile.service.js";
 import {
   enqueueSheetsPushDebounced,
   ensureGroupSheet,
+  ensureLiveGroupSheet,
   getSheetStatus,
   registerDriveWatch,
   handleDriveWebhook,
@@ -192,13 +193,14 @@ export async function sheetStatus(req: Request, res: Response): Promise<void> {
   }
 }
 
-/** POST /sync/sheets/:groupId/ensure — Flutter: tạo/cập nhật group_sheets */
+/** POST /sync/sheets/:groupId/ensure — Flutter: LIVE create + share when enabled */
 export async function ensureSheetUser(req: Request, res: Response): Promise<void> {
   try {
     const user = await requireUser(req);
     const groupId = String(req.params.groupId);
     z.string().uuid().parse(groupId);
-    res.status(201).json(await ensureGroupSheet(groupId, user.id));
+    // User-facing ensure uses LIVE path; internal ensureSheet keeps DB-only ensureGroupSheet.
+    res.status(201).json(await ensureLiveGroupSheet(groupId, user.id));
   } catch (err) {
     sendError(res, err, logger);
   }

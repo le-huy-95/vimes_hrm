@@ -18,6 +18,7 @@ import {
   livePushMatrix,
   liveRegisterDriveWatch,
 } from "./sheets-live.js";
+import { shareSpreadsheetWithGroupMembers } from "./sheets-share.js";
 import { trackGoogleCall } from "./metrics.js";
 import { markJobAuthRequired, markJobDone, markJobRetry } from "./sync.service.js";
 
@@ -75,6 +76,44 @@ export async function ensureGroupSheet(groupId: string, ownerUserId: string) {
       updatedAt: new Date(),
     },
   });
+}
+
+/** DB ensure + (when LIVE) create Drive spreadsheet + share writers. */
+export async function ensureLiveGroupSheet(groupId: string, ownerUserId: string) {
+  const sheet = await ensureGroupSheet(groupId, ownerUserId);
+  if (!LIVE) return sheet;
+
+  const { spreadsheetId, created } = await ensureLiveSpreadsheet({
+    userId: ownerUserId,
+    groupId,
+    spreadsheetId: isRealSpreadsheetId(sheet.spreadsheetId)
+      ? sheet.spreadsheetId
+      : null,
+  });
+
+  const updated = await prismaWrite.groupSheet.update({
+    where: { groupId },
+    data: {
+      spreadsheetId,
+      driveFileId: spreadsheetId,
+      updatedAt: new Date(),
+    },
+  });
+
+  try {
+    await shareSpreadsheetWithGroupMembers({
+      ownerUserId,
+      groupId,
+      spreadsheetId,
+    });
+  } catch (err) {
+    logger.warn(
+      { groupId, spreadsheetId, created, err: String(err) },
+      "sheets share after ensure failed",
+    );
+  }
+
+  return updated;
 }
 
 /** Enqueue SHEETS_PUSH với debounce 30–60s. */
@@ -143,6 +182,18 @@ export async function processSheetsPushJob(job: {
             updatedAt: new Date(),
           },
         });
+        try {
+          await shareSpreadsheetWithGroupMembers({
+            ownerUserId: job.userId,
+            groupId,
+            spreadsheetId,
+          });
+        } catch (shareErr) {
+          logger.warn(
+            { jobId: job.id, groupId, err: String(shareErr) },
+            "sheets share after push failed",
+          );
+        }
         trackGoogleCall(true, "SHEETS_PUSH");
         await markJobDone(job.id);
         endSpan(span, true);

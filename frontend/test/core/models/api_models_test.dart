@@ -77,6 +77,30 @@ void main() {
     expect(s.writableColumns, ['status', 'personal_note']);
   });
 
+  test('GroupSheetDto.googleSheetUrl uses /edit for real ids', () {
+    final s = GroupSheetDto.fromJson({
+      'id': 'sid',
+      'groupId': 'gid',
+      'spreadsheetId': '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
+      'sheetTitle': 'Tasks',
+      'driveFileId': '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
+      'status': 'PUSHED',
+      'lastPushAt': null,
+      'lastPullAt': null,
+      'contentHash': null,
+      'rowHashes': <String, dynamic>{},
+      'writableColumns': ['status', 'personal_note'],
+      'ownerUserId': 'u1',
+      'createdAt': '2026-09-28T07:00:00.000Z',
+      'updatedAt': '2026-09-28T07:00:00.000Z',
+    });
+    expect(s.isLocalMatrix, isFalse);
+    expect(
+      s.googleSheetUrl,
+      'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit',
+    );
+  });
+
   test('SheetsEnqueueResponse parses debounceMs', () {
     final e = SheetsEnqueueResponse.fromJson({
       'jobId': 'j1',
