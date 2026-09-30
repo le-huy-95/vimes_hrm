@@ -132,6 +132,7 @@ class TaskListItem {
     this.maxAssignees,
     this.description,
     this.dueDate,
+    this.startDate,
     this.parentId,
     this.parentCode,
     this.starred = false,
@@ -150,6 +151,8 @@ class TaskListItem {
   final String? description;
   /// YYYY-MM-DD or null.
   final String? dueDate;
+  /// YYYY-MM-DD or null.
+  final String? startDate;
   final String? parentId;
   final String? parentCode;
   final bool starred;
@@ -159,6 +162,7 @@ class TaskListItem {
   factory TaskListItem.fromJson(Map<String, dynamic> j) {
     final createdRaw = j['createdAt'] ?? j['created_at'];
     final dueRaw = j['dueDate'] ?? j['due_date'];
+    final startRaw = j['startDate'] ?? j['start_date'];
     return TaskListItem(
       id: j['id'] as String,
       code: j['code'] as String,
@@ -169,6 +173,7 @@ class TaskListItem {
       maxAssignees: j['maxAssignees'] as int?,
       description: j['description'] as String?,
       dueDate: dueRaw?.toString(),
+      startDate: startRaw?.toString(),
       parentId: j['parentId'] as String? ?? j['parent_id'] as String?,
       parentCode: j['parentCode'] as String? ?? j['parent_code'] as String?,
       createdById: j['createdById'] as String? ?? j['created_by_id'] as String?,
@@ -187,6 +192,8 @@ class TaskListItem {
     List<TaskAssigneeBrief>? assignees,
     String? dueDate,
     bool clearDueDate = false,
+    String? startDate,
+    bool clearStartDate = false,
     bool? starred,
     String? createdById,
   }) {
@@ -203,6 +210,7 @@ class TaskListItem {
       createdById: createdById ?? this.createdById,
       description: description,
       dueDate: clearDueDate ? null : (dueDate ?? this.dueDate),
+      startDate: clearStartDate ? null : (startDate ?? this.startDate),
       parentId: parentId,
       parentCode: parentCode,
       starred: starred ?? this.starred,

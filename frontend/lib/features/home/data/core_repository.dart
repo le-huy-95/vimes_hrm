@@ -148,6 +148,7 @@ class CoreRepository {
     int? maxAssignees,
     List<String>? assigneeIds,
     String? dueDate,
+    String? startDate,
     String? parentCode,
   }) async {
     try {
@@ -161,6 +162,7 @@ class CoreRepository {
           if (maxAssignees != null) 'maxAssignees': maxAssignees,
           if (assigneeIds != null) 'assigneeIds': assigneeIds,
           if (dueDate != null) 'dueDate': dueDate,
+          if (startDate != null) 'startDate': startDate,
           if (parentCode != null) 'parentCode': parentCode,
         },
       );
@@ -178,6 +180,7 @@ class CoreRepository {
         createdById: t['createdById'] as String? ?? t['created_by_id'] as String?,
         description: description,
         dueDate: dueDate,
+        startDate: startDate,
       );
     } catch (e) {
       throw mapDioError(e);
@@ -218,6 +221,8 @@ class CoreRepository {
     String? description,
     String? dueDate,
     bool clearDueDate = false,
+    String? startDate,
+    bool clearStartDate = false,
     String? status,
     bool? starred,
   }) async {
@@ -229,6 +234,8 @@ class CoreRepository {
           if (description != null) 'description': description,
           if (clearDueDate) 'dueDate': null,
           if (!clearDueDate && dueDate != null) 'dueDate': dueDate,
+          if (clearStartDate) 'startDate': null,
+          if (!clearStartDate && startDate != null) 'startDate': startDate,
           if (status != null) 'status': status,
           if (starred != null) 'starred': starred,
         },
