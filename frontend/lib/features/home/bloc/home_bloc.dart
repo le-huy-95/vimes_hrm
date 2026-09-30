@@ -20,6 +20,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<HomeAcceptInviteRequested>(_onAcceptInvite);
     on<HomeRemoveMemberRequested>(_onRemoveMember);
     on<HomeAddMemberRequested>(_onAddMember);
+    on<HomeLeaveGroupRequested>(_onLeaveGroup);
 
     _wsSub = _workspace.stream.listen((ws) {
       if (ws is WorkspaceReady) {
@@ -177,6 +178,23 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       final detail = await _core.getGroup(_groupId!);
       emit(HomeActionSuccess('Đã thêm thành viên', members: detail.members));
       emit(HomeReady(members: detail.members));
+    } catch (e) {
+      emit(HomeFailure(_msg(e), members: _members));
+      emit(HomeReady(members: _members));
+    }
+  }
+
+  Future<void> _onLeaveGroup(
+    HomeLeaveGroupRequested event,
+    Emitter<HomeState> emit,
+  ) async {
+    if (_groupId == null) return;
+    emit(HomeReady(members: _members, busy: true));
+    try {
+      await _core.leaveGroup(_groupId!);
+      _workspace.add(const WorkspaceRefreshRequested());
+      emit(const HomeActionSuccess('Đã rời nhóm', members: []));
+      emit(const HomeReady(members: []));
     } catch (e) {
       emit(HomeFailure(_msg(e), members: _members));
       emit(HomeReady(members: _members));
