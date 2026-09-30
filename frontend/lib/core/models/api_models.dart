@@ -15,9 +15,45 @@ class OrganizationItem {
   bool get isAdmin => role == 'OWNER' || role == 'ADMIN';
 
   factory OrganizationItem.fromJson(Map<String, dynamic> j) => OrganizationItem(
+    id: j['id'] as String,
+    name: j['name'] as String,
+    role: j['role'] as String? ?? 'MEMBER',
+  );
+}
+
+class OrgInvitationItem {
+  const OrgInvitationItem({
+    required this.id,
+    required this.organizationId,
+    required this.organizationName,
+    required this.role,
+    required this.status,
+    required this.invitedByName,
+    required this.expiresAt,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String organizationId;
+  final String organizationName;
+  final String role;
+  final String status; // PENDING | ACCEPTED | REJECTED
+  final String invitedByName;
+  final DateTime expiresAt;
+  final DateTime createdAt;
+
+  bool get isPending => status == 'PENDING';
+
+  factory OrgInvitationItem.fromJson(Map<String, dynamic> j) =>
+      OrgInvitationItem(
         id: j['id'] as String,
-        name: j['name'] as String,
+        organizationId: j['organizationId'] as String,
+        organizationName: j['organizationName'] as String? ?? '',
         role: j['role'] as String? ?? 'MEMBER',
+        status: j['status'] as String? ?? 'PENDING',
+        invitedByName: j['invitedByName'] as String? ?? '',
+        expiresAt: DateTime.parse(j['expiresAt'] as String),
+        createdAt: DateTime.parse(j['createdAt'] as String),
       );
 }
 
@@ -37,11 +73,11 @@ class GroupSummary {
   bool get isAdmin => myRole == 'OWNER' || myRole == 'ADMIN';
 
   factory GroupSummary.fromJson(Map<String, dynamic> j) => GroupSummary(
-        id: j['id'] as String,
-        organizationId: j['organizationId'] as String,
-        name: j['name'] as String,
-        myRole: j['myRole'] as String?,
-      );
+    id: j['id'] as String,
+    organizationId: j['organizationId'] as String,
+    name: j['name'] as String,
+    myRole: j['myRole'] as String?,
+  );
 }
 
 class GroupMember {
@@ -58,11 +94,11 @@ class GroupMember {
   final String? displayName;
 
   factory GroupMember.fromJson(Map<String, dynamic> j) => GroupMember(
-        userId: j['userId'] as String,
-        role: j['role'] as String,
-        email: j['email'] as String? ?? '',
-        displayName: j['displayName'] as String?,
-      );
+    userId: j['userId'] as String,
+    role: j['role'] as String,
+    email: j['email'] as String? ?? '',
+    displayName: j['displayName'] as String?,
+  );
 }
 
 class GroupDetail {
@@ -88,7 +124,8 @@ class GroupDetail {
       id: group['id'] as String,
       organizationId: group['organizationId'] as String,
       name: group['name'] as String,
-      settings: (group['settings'] as Map?)?.cast<String, dynamic>() ?? const {},
+      settings:
+          (group['settings'] as Map?)?.cast<String, dynamic>() ?? const {},
       members: (group['members'] as List<dynamic>? ?? const [])
           .map((e) => GroupMember.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -148,6 +185,7 @@ class TaskListItem {
   final DateTime createdAt;
   final String? createdById;
   final String? description;
+
   /// YYYY-MM-DD or null.
   final String? dueDate;
   final String? parentId;
@@ -228,13 +266,13 @@ class ConversationItem {
   final int lastReadSeq;
 
   factory ConversationItem.fromJson(Map<String, dynamic> j) => ConversationItem(
-        id: j['id'] as String,
-        type: j['type'] as String,
-        groupId: j['groupId'] as String?,
-        taskId: j['taskId'] as String?,
-        title: j['title'] as String?,
-        lastReadSeq: (j['lastReadSeq'] as num?)?.toInt() ?? 0,
-      );
+    id: j['id'] as String,
+    type: j['type'] as String,
+    groupId: j['groupId'] as String?,
+    taskId: j['taskId'] as String?,
+    title: j['title'] as String?,
+    lastReadSeq: (j['lastReadSeq'] as num?)?.toInt() ?? 0,
+  );
 }
 
 class ReactionAgg {
@@ -249,10 +287,10 @@ class ReactionAgg {
   final bool me;
 
   factory ReactionAgg.fromJson(Map<String, dynamic> j) => ReactionAgg(
-        emoji: j['emoji'] as String,
-        count: (j['count'] as num?)?.toInt() ?? 0,
-        me: j['me'] as bool? ?? false,
-      );
+    emoji: j['emoji'] as String,
+    count: (j['count'] as num?)?.toInt() ?? 0,
+    me: j['me'] as bool? ?? false,
+  );
 }
 
 class ChatMessage {
@@ -289,29 +327,29 @@ class ChatMessage {
   final bool? deduped;
 
   factory ChatMessage.fromJson(Map<String, dynamic> j) => ChatMessage(
-        id: j['id'] as String,
-        seq: (j['seq'] as num?)?.toInt() ?? 0,
-        clientMsgId: j['clientMsgId'] as String?,
-        senderUserId: j['senderUserId'] as String? ?? '',
-        body: j['body'] as String? ?? '',
-        replyToId: j['replyToId'] as String?,
-        fileIds: (j['fileIds'] as List<dynamic>? ?? const [])
-            .map((e) => e as String)
-            .toList(),
-        mentions: (j['mentions'] as List<dynamic>? ?? const [])
-            .map((e) => e as String)
-            .toList(),
-        reactions: (j['reactions'] as List<dynamic>? ?? const [])
-            .map((e) => ReactionAgg.fromJson(e as Map<String, dynamic>))
-            .toList(),
-        createdAt: DateTime.parse(j['createdAt'].toString()),
-        editedAt: j['editedAt'] != null
-            ? DateTime.parse(j['editedAt'].toString())
-            : null,
-        deleted: j['deleted'] as bool? ?? false,
-        conversationId: j['conversationId'] as String?,
-        deduped: j['deduped'] as bool?,
-      );
+    id: j['id'] as String,
+    seq: (j['seq'] as num?)?.toInt() ?? 0,
+    clientMsgId: j['clientMsgId'] as String?,
+    senderUserId: j['senderUserId'] as String? ?? '',
+    body: j['body'] as String? ?? '',
+    replyToId: j['replyToId'] as String?,
+    fileIds: (j['fileIds'] as List<dynamic>? ?? const [])
+        .map((e) => e as String)
+        .toList(),
+    mentions: (j['mentions'] as List<dynamic>? ?? const [])
+        .map((e) => e as String)
+        .toList(),
+    reactions: (j['reactions'] as List<dynamic>? ?? const [])
+        .map((e) => ReactionAgg.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    createdAt: DateTime.parse(j['createdAt'].toString()),
+    editedAt: j['editedAt'] != null
+        ? DateTime.parse(j['editedAt'].toString())
+        : null,
+    deleted: j['deleted'] as bool? ?? false,
+    conversationId: j['conversationId'] as String?,
+    deduped: j['deduped'] as bool?,
+  );
 }
 
 class SyncBacklog {
@@ -328,11 +366,11 @@ class SyncBacklog {
   final int authRequired;
 
   factory SyncBacklog.fromJson(Map<String, dynamic> j) => SyncBacklog(
-        pending: (j['pending'] as num?)?.toInt() ?? 0,
-        retry: (j['retry'] as num?)?.toInt() ?? 0,
-        failed: (j['failed'] as num?)?.toInt() ?? 0,
-        authRequired: (j['authRequired'] as num?)?.toInt() ?? 0,
-      );
+    pending: (j['pending'] as num?)?.toInt() ?? 0,
+    retry: (j['retry'] as num?)?.toInt() ?? 0,
+    failed: (j['failed'] as num?)?.toInt() ?? 0,
+    authRequired: (j['authRequired'] as num?)?.toInt() ?? 0,
+  );
 }
 
 class SyncStatus {
@@ -351,18 +389,18 @@ class SyncStatus {
   final List<Map<String, dynamic>> recentJobs;
 
   factory SyncStatus.fromJson(Map<String, dynamic> j) => SyncStatus(
-        googleLinked: j['googleLinked'] as bool? ?? false,
-        tasksLastPullAt: j['tasksLastPullAt'] != null
-            ? DateTime.parse(j['tasksLastPullAt'].toString())
-            : null,
-        backlog: SyncBacklog.fromJson(
-          (j['backlog'] as Map<String, dynamic>?) ?? const {},
-        ),
-        linkedTasks: (j['linkedTasks'] as num?)?.toInt() ?? 0,
-        recentJobs: (j['recentJobs'] as List<dynamic>? ?? const [])
-            .map((e) => Map<String, dynamic>.from(e as Map))
-            .toList(),
-      );
+    googleLinked: j['googleLinked'] as bool? ?? false,
+    tasksLastPullAt: j['tasksLastPullAt'] != null
+        ? DateTime.parse(j['tasksLastPullAt'].toString())
+        : null,
+    backlog: SyncBacklog.fromJson(
+      (j['backlog'] as Map<String, dynamic>?) ?? const {},
+    ),
+    linkedTasks: (j['linkedTasks'] as num?)?.toInt() ?? 0,
+    recentJobs: (j['recentJobs'] as List<dynamic>? ?? const [])
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList(),
+  );
 }
 
 class GroupSheetDto {
@@ -406,32 +444,32 @@ class GroupSheetDto {
       : 'https://docs.google.com/spreadsheets/d/$spreadsheetId';
 
   factory GroupSheetDto.fromJson(Map<String, dynamic> j) => GroupSheetDto(
-        id: j['id'] as String,
-        groupId: j['groupId'] as String,
-        spreadsheetId: j['spreadsheetId'] as String?,
-        sheetTitle: j['sheetTitle'] as String? ?? 'Tasks',
-        driveFileId: j['driveFileId'] as String?,
-        status: j['status'] as String,
-        lastPushAt: j['lastPushAt'] != null
-            ? DateTime.parse(j['lastPushAt'].toString())
-            : null,
-        lastPullAt: j['lastPullAt'] != null
-            ? DateTime.parse(j['lastPullAt'].toString())
-            : null,
-        contentHash: j['contentHash'] as String?,
-        rowHashes: Map<String, String>.from(
-          (j['rowHashes'] as Map?)?.map(
-                (k, v) => MapEntry(k.toString(), v.toString()),
-              ) ??
-              const {},
-        ),
-        writableColumns: (j['writableColumns'] as List? ?? const [])
-            .map((e) => e.toString())
-            .toList(),
-        ownerUserId: j['ownerUserId'] as String?,
-        createdAt: DateTime.parse(j['createdAt'].toString()),
-        updatedAt: DateTime.parse(j['updatedAt'].toString()),
-      );
+    id: j['id'] as String,
+    groupId: j['groupId'] as String,
+    spreadsheetId: j['spreadsheetId'] as String?,
+    sheetTitle: j['sheetTitle'] as String? ?? 'Tasks',
+    driveFileId: j['driveFileId'] as String?,
+    status: j['status'] as String,
+    lastPushAt: j['lastPushAt'] != null
+        ? DateTime.parse(j['lastPushAt'].toString())
+        : null,
+    lastPullAt: j['lastPullAt'] != null
+        ? DateTime.parse(j['lastPullAt'].toString())
+        : null,
+    contentHash: j['contentHash'] as String?,
+    rowHashes: Map<String, String>.from(
+      (j['rowHashes'] as Map?)?.map(
+            (k, v) => MapEntry(k.toString(), v.toString()),
+          ) ??
+          const {},
+    ),
+    writableColumns: (j['writableColumns'] as List? ?? const [])
+        .map((e) => e.toString())
+        .toList(),
+    ownerUserId: j['ownerUserId'] as String?,
+    createdAt: DateTime.parse(j['createdAt'].toString()),
+    updatedAt: DateTime.parse(j['updatedAt'].toString()),
+  );
 }
 
 class DriveWatchDto {
@@ -460,17 +498,17 @@ class DriveWatchDto {
   final DateTime updatedAt;
 
   factory DriveWatchDto.fromJson(Map<String, dynamic> j) => DriveWatchDto(
-        id: j['id'] as String,
-        groupId: j['groupId'] as String,
-        fileId: j['fileId'] as String,
-        channelId: j['channelId'] as String,
-        resourceId: j['resourceId'] as String?,
-        token: j['token'] as String,
-        expiresAt: DateTime.parse(j['expiresAt'].toString()),
-        status: j['status'] as String,
-        createdAt: DateTime.parse(j['createdAt'].toString()),
-        updatedAt: DateTime.parse(j['updatedAt'].toString()),
-      );
+    id: j['id'] as String,
+    groupId: j['groupId'] as String,
+    fileId: j['fileId'] as String,
+    channelId: j['channelId'] as String,
+    resourceId: j['resourceId'] as String?,
+    token: j['token'] as String,
+    expiresAt: DateTime.parse(j['expiresAt'].toString()),
+    status: j['status'] as String,
+    createdAt: DateTime.parse(j['createdAt'].toString()),
+    updatedAt: DateTime.parse(j['updatedAt'].toString()),
+  );
 }
 
 class SheetStatusResponse {

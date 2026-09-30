@@ -49,13 +49,32 @@ class CoreRepository {
     }
   }
 
-  Future<String> acceptOrgInvitation(String token) async {
+  Future<List<OrgInvitationItem>> listOrgInvitations() async {
+    try {
+      final res = await _api.dio.get<Map<String, dynamic>>('/invitations/org');
+      final list = res.data?['invitations'] as List<dynamic>? ?? [];
+      return list
+          .map((e) => OrgInvitationItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  Future<String> acceptOrgInvitation(String invitationId) async {
     try {
       final res = await _api.dio.post<Map<String, dynamic>>(
-        '/invitations/org/accept',
-        data: {'token': token},
+        '/invitations/org/$invitationId/accept',
       );
       return res.data?['organizationId'] as String? ?? '';
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  Future<void> rejectOrgInvitation(String invitationId) async {
+    try {
+      await _api.dio.post('/invitations/org/$invitationId/reject');
     } catch (e) {
       throw mapDioError(e);
     }
@@ -175,7 +194,8 @@ class CoreRepository {
         maxAssignees: maxAssignees,
         assignees: const [],
         createdAt: DateTime.now().toUtc(),
-        createdById: t['createdById'] as String? ?? t['created_by_id'] as String?,
+        createdById:
+            t['createdById'] as String? ?? t['created_by_id'] as String?,
         description: description,
         dueDate: dueDate,
       );
