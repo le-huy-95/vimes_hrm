@@ -403,7 +403,7 @@ class GroupSheetDto {
 
   String? get googleSheetUrl => isLocalMatrix || spreadsheetId == null
       ? null
-      : 'https://docs.google.com/spreadsheets/d/$spreadsheetId';
+      : 'https://docs.google.com/spreadsheets/d/$spreadsheetId/edit';
 
   factory GroupSheetDto.fromJson(Map<String, dynamic> j) => GroupSheetDto(
         id: j['id'] as String,
