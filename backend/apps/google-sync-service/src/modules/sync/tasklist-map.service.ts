@@ -39,18 +39,27 @@ export async function resolveTasklistIdForPush(
 }
 
 export async function listMapsForUser(userId: string) {
-  const [members, maps] = await Promise.all([
+  const [memberships, maps] = await Promise.all([
     prismaRead.groupMember.findMany({
       where: { userId, status: "ACTIVE" },
-      select: { groupId: true },
+      include: { group: { select: { id: true, name: true } } },
     }),
     prismaRead.userGroupTasklistMap.findMany({ where: { userId } }),
   ]);
-  const groups = maps;
-  const mappedGroupIds = maps.map((m) => m.groupId);
+  const mapByGroup = new Map(maps.map((m) => [m.groupId, m]));
+  const groups = memberships.map((m) => {
+    const map = mapByGroup.get(m.groupId);
+    return {
+      groupId: m.groupId,
+      groupName: m.group.name,
+      googleTasklistId: map?.googleTasklistId ?? null,
+      googleTasklistTitle: map?.googleTasklistTitle ?? null,
+      mapped: Boolean(map),
+    };
+  });
   const unmappedGroupIds = pickUnmappedGroupIds(
-    members.map((m) => m.groupId),
-    mappedGroupIds,
+    groups.map((g) => g.groupId),
+    maps.map((m) => m.groupId),
   );
   return { groups, unmappedGroupIds };
 }
@@ -139,5 +148,7 @@ export async function listGoogleTasklists(userId: string) {
   const refreshToken = decryptSecret(account.refreshTokenEnc);
   const tasksApi = await getTasksClient(userId, clientId, clientSecret, refreshToken);
   const listed = await tasksApi.tasklists.list({ maxResults: 100 });
-  return (listed.data.items ?? []).map((i) => ({ id: i.id!, title: i.title ?? "" }));
+  return (listed.data.items ?? [])
+    .filter((i) => i.id)
+    .map((i) => ({ id: i.id!, title: i.title ?? i.id! }));
 }
