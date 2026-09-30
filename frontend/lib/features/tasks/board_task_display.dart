@@ -15,6 +15,20 @@ String? formatBoardDueLabel(String? dueDate, {DateTime? now}) {
   return '${due.day} thg ${due.month}';
 }
 
+/// Compact start→due range for board/list/calendar. Null when both empty.
+String? formatBoardDateRangeLabel(
+  String? startDate,
+  String? dueDate, {
+  DateTime? now,
+}) {
+  final start = formatBoardDueLabel(startDate, now: now);
+  final due = formatBoardDueLabel(dueDate, now: now);
+  if (start == null && due == null) return null;
+  if (start == null) return due;
+  if (due == null) return start;
+  return '$start → $due';
+}
+
 String _firstChar(String s) {
   final it = s.runes.iterator;
   if (!it.moveNext()) return '?';

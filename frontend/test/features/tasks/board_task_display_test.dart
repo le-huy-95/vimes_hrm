@@ -23,6 +23,31 @@ void main() {
     });
   });
 
+  group('formatBoardDateRangeLabel', () {
+    final now = DateTime(2026, 9, 30);
+    test('null when both empty', () {
+      expect(formatBoardDateRangeLabel(null, null, now: now), isNull);
+    });
+    test('due only', () {
+      expect(
+        formatBoardDateRangeLabel(null, '2026-09-30', now: now),
+        'Hôm nay',
+      );
+    });
+    test('start only', () {
+      expect(
+        formatBoardDateRangeLabel('2026-10-12', null, now: now),
+        '12 thg 10',
+      );
+    });
+    test('both with arrow', () {
+      expect(
+        formatBoardDateRangeLabel('2026-09-28', '2026-10-05', now: now),
+        '28 thg 9 → 5 thg 10',
+      );
+    });
+  });
+
   group('assigneeInitials', () {
     test('uses first letters of up to two words', () {
       expect(assigneeInitials('Nguyễn Văn A'), 'NA');
