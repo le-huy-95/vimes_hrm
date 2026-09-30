@@ -517,7 +517,7 @@ class _TaskCard extends StatelessWidget {
         : (assignee.displayName?.trim().isNotEmpty == true
             ? assignee.displayName!.trim()
             : assignee.email);
-    final dueLabel = formatBoardDueLabel(task.dueDate);
+    final dateLabel = formatBoardDateRangeLabel(task.startDate, task.dueDate);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -598,7 +598,7 @@ class _TaskCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (dueLabel != null) ...[
+                if (dateLabel != null) ...[
                   const SizedBox(width: 8),
                   const Icon(
                     Icons.calendar_today_outlined,
@@ -607,7 +607,7 @@ class _TaskCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 3),
                   Text(
-                    dueLabel,
+                    dateLabel,
                     style: const TextStyle(
                       fontSize: 11,
                       color: ColorSkin.subtitle,
@@ -805,6 +805,18 @@ class _ListView extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 8),
+                        if (formatBoardDateRangeLabel(t.startDate, t.dueDate)
+                            case final range?)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Text(
+                              range,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ),
                         _DueChips(task: t),
                         const SizedBox(height: 6),
                         _AssigneeRow(task: t, onClaim: onClaim),
@@ -1098,7 +1110,9 @@ class _CalendarView extends StatelessWidget {
               for (final t in _forDay(focusedDay))
                 ListTile(
                   title: Text('${t.code} — ${t.title}'),
-                  subtitle: Text('Hạn: ${t.dueDate} · ${t.status}'),
+                  subtitle: Text(
+                    '${formatBoardDateRangeLabel(t.startDate, t.dueDate) ?? 'Không có ngày'} · ${t.status}',
+                  ),
                   onTap: () => showTaskDetailDialog(context, t),
                 ),
             ],
