@@ -14,6 +14,7 @@ import 'package:manage_teams/features/auth/data/google_sign_in_helper.dart';
 import 'package:manage_teams/features/sync/bloc/sync_bloc.dart';
 import 'package:manage_teams/features/sync/bloc/sync_event.dart';
 import 'package:manage_teams/features/sync/bloc/sync_state.dart';
+import 'package:manage_teams/features/sync/widgets/sheet_embed_view.dart';
 import 'package:manage_teams/features/workspace/bloc/workspace_bloc.dart';
 import 'package:manage_teams/features/workspace/bloc/workspace_event.dart';
 import 'package:manage_teams/features/workspace/bloc/workspace_state.dart';
@@ -756,8 +757,25 @@ class _SheetSection extends StatelessWidget {
               ),
               if (sheet.googleSheetUrl != null)
                 AppButton(
-                  label: 'Mở trên Google Sheets',
-                  onPressed: () => _openSheet(sheet.googleSheetUrl!),
+                  label: supportsInAppSheetEmbed()
+                      ? 'Mở trong app'
+                      : 'Mở Google Sheets',
+                  variant: AppButtonVariant.primary,
+                  onPressed: () {
+                    final url = sheet.googleSheetUrl!;
+                    if (supportsInAppSheetEmbed()) {
+                      context.push(
+                        '/sync/sheet/${sheet.groupId}',
+                        extra: {
+                          'sheetTitle': sheet.sheetTitle,
+                          'spreadsheetUrl': url,
+                          'isLocalMatrix': sheet.isLocalMatrix,
+                        },
+                      );
+                    } else {
+                      _openSheet(url);
+                    }
+                  },
                 ),
             ],
           ),

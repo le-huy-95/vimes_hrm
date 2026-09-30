@@ -26,6 +26,7 @@ import 'package:manage_teams/features/shell/pages/app_shell.dart';
 import 'package:manage_teams/features/splash/pages/splash_page.dart';
 import 'package:manage_teams/features/sync/bloc/sync_bloc.dart';
 import 'package:manage_teams/features/sync/bloc/sync_event.dart';
+import 'package:manage_teams/features/sync/pages/sheet_editor_page.dart';
 import 'package:manage_teams/features/sync/pages/sync_tab_page.dart';
 import 'package:manage_teams/features/tasks/bloc/tasks_bloc.dart';
 import 'package:manage_teams/features/tasks/bloc/tasks_event.dart';
@@ -253,6 +254,21 @@ GoRouter createAppRouter(AuthBloc authBloc) {
               GoRoute(
                 path: AppRoutes.sync.path,
                 builder: (context, state) => const SyncTabPage(),
+                routes: [
+                  GoRoute(
+                    path: 'sheet/:groupId',
+                    builder: (context, state) {
+                      final groupId = state.pathParameters['groupId']!;
+                      final extra = _extraMap(state.extra);
+                      return SheetEditorPage(
+                        groupId: groupId,
+                        sheetTitle: extra?['sheetTitle'] as String?,
+                        spreadsheetUrl: extra?['spreadsheetUrl'] as String?,
+                        isLocalMatrix: extra?['isLocalMatrix'] == true,
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),
