@@ -21,6 +21,11 @@ import {
   setTaskDetailCache,
   setTaskListCache,
 } from "../../infra/task-cache.js";
+import {
+  assertStartNotAfterDue,
+  formatTaskDate,
+  parseTaskDateOrThrow,
+} from "./task-dates.js";
 
 export type CreateTaskInput = {
   title: string;
@@ -30,6 +35,7 @@ export type CreateTaskInput = {
   allowClaim: boolean;
   assigneeIds?: string[];
   dueDate?: string | null;
+  startDate?: string | null;
   parentCode?: string;
 };
 
@@ -58,6 +64,7 @@ export type PatchTaskInput = {
   title?: string;
   description?: string | null;
   dueDate?: string | null;
+  startDate?: string | null;
   status?: TaskBoardStatus;
   starred?: boolean;
 };
@@ -118,6 +125,8 @@ export async function createTask(groupId: string, userId: string, input: CreateT
     await requireGroupMember(groupId, uid);
   }
   const dueParsed = parseDueOrThrow(input.dueDate);
+  const startParsed = parseTaskDateOrThrow(input.startDate);
+  assertStartNotAfterDue(startParsed ?? null, dueParsed ?? null);
 
   const task = await prismaWrite.$transaction(async (tx) => {
     const code = await nextTaskCode(tx, groupId);
@@ -137,6 +146,7 @@ export async function createTask(groupId: string, userId: string, input: CreateT
         createdById: userId,
         status: assigneeIds.length > 0 ? "IN_PROGRESS" : "TODO",
         dueDate: dueParsed === undefined ? null : dueParsed,
+        startDate: startParsed === undefined ? null : startParsed,
         parentId,
       },
     });
@@ -151,7 +161,12 @@ export async function createTask(groupId: string, userId: string, input: CreateT
         eventType: "TaskCreated",
         actorUserId: userId,
         actorVia: "user",
-        payload: { title: t.title, code: t.code, dueDate: formatDue(t.dueDate) },
+        payload: {
+          title: t.title,
+          code: t.code,
+          dueDate: formatDue(t.dueDate),
+          startDate: formatTaskDate(t.startDate),
+        },
       },
     });
     const ev = envelope({
@@ -227,6 +242,7 @@ export async function listTasks(
     createdAt: t.createdAt,
     createdById: t.createdById,
     dueDate: formatDue(t.dueDate),
+    startDate: formatTaskDate(t.startDate),
     description: t.description,
     starred: t.starred,
     parentId: t.parentId,
@@ -268,6 +284,7 @@ export async function getTask(groupId: string, code: string, userId: string) {
   const detail = {
     ...task,
     dueDate: formatDue(task.dueDate),
+    startDate: formatTaskDate(task.startDate),
   };
   await setTaskDetailCache(task.id, task.version, detail as Record<string, unknown>);
   return detail;
@@ -352,6 +369,7 @@ export async function patchTask(
     input.title === undefined &&
     input.description === undefined &&
     input.dueDate === undefined &&
+    input.startDate === undefined &&
     input.status === undefined &&
     input.starred === undefined
   ) {
@@ -361,15 +379,23 @@ export async function patchTask(
     throw new AppError("Trạng thái không hợp lệ", "INVALID_STATUS", 400);
   }
   const dueParsed = parseDueOrThrow(input.dueDate);
+  const startParsed = parseTaskDateOrThrow(input.startDate);
 
   const task = await prismaWrite.$transaction(async (tx) => {
     const existing = await tx.task.findUnique({ where: { groupId_code: { groupId, code } } });
     if (!existing || existing.deletedAt) throw new AppError("Không tìm thấy", "NOT_FOUND", 404);
 
+    const nextStart =
+      startParsed === undefined ? existing.startDate : startParsed;
+    const nextDue =
+      dueParsed === undefined ? existing.dueDate : dueParsed;
+    assertStartNotAfterDue(nextStart, nextDue);
+
     const data: Prisma.TaskUpdateInput = { version: { increment: 1 } };
     if (input.title !== undefined) data.title = input.title;
     if (input.description !== undefined) data.description = input.description;
     if (dueParsed !== undefined) data.dueDate = dueParsed;
+    if (startParsed !== undefined) data.startDate = startParsed;
     if (input.starred !== undefined) data.starred = input.starred;
 
     let statusMoved = false;
@@ -413,6 +439,7 @@ export async function patchTask(
         payload: {
           title: input.title,
           dueDate: input.dueDate,
+          startDate: input.startDate,
           status: statusMoved ? updated.status : undefined,
         },
       },
@@ -427,6 +454,7 @@ export async function patchTask(
         groupId,
         code,
         dueDate: formatDue(updated.dueDate),
+        startDate: formatTaskDate(updated.startDate),
         status: updated.status,
       },
     });
@@ -459,6 +487,7 @@ export async function patchTask(
     title: task.title,
     status: task.status,
     dueDate: formatDue(task.dueDate),
+    startDate: formatTaskDate(task.startDate),
     description: task.description,
     starred: task.starred,
   };

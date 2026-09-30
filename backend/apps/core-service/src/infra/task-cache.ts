@@ -17,6 +17,7 @@ export type CachedTaskListItem = {
   createdAt: Date;
   createdById: string | null;
   dueDate: string | null;
+  startDate: string | null;
   description: string | null;
   parentId: string | null;
   parentCode: string | null;

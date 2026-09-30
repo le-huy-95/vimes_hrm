@@ -21,6 +21,9 @@ export const CreateTaskSchema = z.object({
   dueDate: z
     .union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.null()])
     .optional(),
+  startDate: z
+    .union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.null()])
+    .optional(),
   parentCode: z.string().min(1).max(64).optional(),
 });
 export const AssignTaskSchema = z.object({ userId: z.string().uuid() });
@@ -31,6 +34,9 @@ export const PatchTaskSchema = z.object({
   title: z.string().min(1).max(300).optional(),
   description: z.string().max(5000).nullable().optional(),
   dueDate: z
+    .union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.null()])
+    .optional(),
+  startDate: z
     .union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.null()])
     .optional(),
   status: z.enum(["TODO", "IN_PROGRESS", "DONE"]).optional(),
