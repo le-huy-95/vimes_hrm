@@ -546,7 +546,7 @@ CREATE INDEX IF NOT EXISTS tasks_group_starred_idx ON tasks (group_id, starred) 
 `,
   },
   {
-    id: "017_task_start_date",
+    id: "018_task_start_date",
     sql: `
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS start_date DATE;
 `,
