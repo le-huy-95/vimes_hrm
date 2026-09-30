@@ -15,6 +15,7 @@ export type CachedTaskListItem = {
   maxAssignees: number | null;
   allowClaim: boolean;
   createdAt: Date;
+  createdById: string | null;
   dueDate: string | null;
   description: string | null;
   parentId: string | null;

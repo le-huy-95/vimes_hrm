@@ -11,6 +11,7 @@ taskRoutes.delete("/groups/:groupId/tasks/:code", taskController.deleteTask);
 taskRoutes.post("/groups/:groupId/tasks/:code/claim", taskController.claimTask);
 taskRoutes.post("/groups/:groupId/tasks/:code/complete", taskController.completeTask);
 taskRoutes.post("/groups/:groupId/tasks/:code/assign", taskController.assignTask);
+taskRoutes.post("/groups/:groupId/tasks/:code/unassign", taskController.unassignTask);
 taskRoutes.post("/internal/tasks/complete", (req, res) =>
   void taskController.completeTaskInternal(req, res),
 );

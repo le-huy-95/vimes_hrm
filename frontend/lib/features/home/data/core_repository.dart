@@ -175,6 +175,7 @@ class CoreRepository {
         maxAssignees: maxAssignees,
         assignees: const [],
         createdAt: DateTime.now().toUtc(),
+        createdById: t['createdById'] as String? ?? t['created_by_id'] as String?,
         description: description,
         dueDate: dueDate,
       );
@@ -218,6 +219,7 @@ class CoreRepository {
     String? dueDate,
     bool clearDueDate = false,
     String? status,
+    bool? starred,
   }) async {
     try {
       await _api.dio.patch(
@@ -228,7 +230,23 @@ class CoreRepository {
           if (clearDueDate) 'dueDate': null,
           if (!clearDueDate && dueDate != null) 'dueDate': dueDate,
           if (status != null) 'status': status,
+          if (starred != null) 'starred': starred,
         },
+      );
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  Future<void> unassignTask(
+    String groupId,
+    String code, {
+    String? userId,
+  }) async {
+    try {
+      await _api.dio.post(
+        '/groups/$groupId/tasks/$code/unassign',
+        data: {if (userId != null) 'userId': userId},
       );
     } catch (e) {
       throw mapDioError(e);

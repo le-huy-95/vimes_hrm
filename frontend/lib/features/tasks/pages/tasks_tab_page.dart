@@ -747,6 +747,29 @@ class _ListView extends StatelessWidget {
                       children: [
                         Row(
                           children: [
+                            IconButton(
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                minWidth: 32,
+                                minHeight: 32,
+                              ),
+                              tooltip: t.starred ? 'Bỏ gắn sao' : 'Gắn sao',
+                              onPressed: () {
+                                context.read<TasksBloc>().add(
+                                  TasksPatchRequested(
+                                    code: t.code,
+                                    starred: !t.starred,
+                                  ),
+                                );
+                              },
+                              icon: Icon(
+                                t.starred ? Icons.star : Icons.star_border,
+                                size: 20,
+                                color: t.starred
+                                    ? Colors.amber.shade700
+                                    : Colors.black38,
+                              ),
+                            ),
                             if (isChild)
                               Padding(
                                 padding: const EdgeInsets.only(right: 6),

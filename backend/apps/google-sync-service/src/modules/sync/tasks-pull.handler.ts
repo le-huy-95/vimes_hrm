@@ -16,7 +16,13 @@ import {
   splitGoogleNotes,
 } from "./notes-split.js";
 import { emitGoogleSignals, type GoogleSignal } from "./signals.service.js";
-import { enqueueTaskPush, markJobAuthRequired, markJobDone, markJobRetry } from "./sync.service.js";
+import {
+  enqueueTaskDeletesForAppTask,
+  enqueueTaskPush,
+  markJobAuthRequired,
+  markJobDone,
+  markJobRetry,
+} from "./sync.service.js";
 
 const logger = createLogger("google-sync-service");
 const listTitle = process.env.GOOGLE_TASKS_LIST_TITLE ?? "Manage Teams";
@@ -173,12 +179,46 @@ export async function processTaskPullJob(job: {
               where: { id: link.id },
               data: { status: "DETACHED", updatedAt: new Date() },
             });
+
+            const local = await prismaRead.task.findUnique({
+              where: { id: taskId },
+              select: { id: true, deletedAt: true, groupId: true },
+            });
+            if (local && !local.deletedAt) {
+              const children = await prismaRead.task.findMany({
+                where: { parentId: taskId, deletedAt: null },
+                select: { id: true },
+              });
+              const toDelete = [taskId, ...children.map((c) => c.id)];
+              const now = new Date();
+              await prismaWrite.$transaction(async (tx) => {
+                for (const id of toDelete) {
+                  await tx.task.update({
+                    where: { id },
+                    data: { deletedAt: now, version: { increment: 1 } },
+                  });
+                  await tx.taskEvent.create({
+                    data: {
+                      taskId: id,
+                      eventType: "TaskDeleted",
+                      actorUserId: job.userId,
+                      actorVia: "google",
+                      payload: { source: "google_tasks_delete", groupId: local.groupId },
+                    },
+                  });
+                }
+              });
+              for (const id of toDelete) {
+                await enqueueTaskDeletesForAppTask(id);
+              }
+            }
+
             applied += 1;
             changedFields.push("deleted");
             signals.push({
               userId: job.userId,
               taskId,
-              kind: "detached",
+              kind: "deleted",
               changedFields: ["deleted"],
             });
           }

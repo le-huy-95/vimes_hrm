@@ -9,6 +9,7 @@ import {
 import { z } from "zod";
 import {
   enqueueTaskPush,
+  enqueueTaskDelete,
   enqueueTaskDeletesForAppTask,
   enqueueTaskPull,
   enqueueSheetsJob,
@@ -78,13 +79,18 @@ export async function enqueueTask(req: Request, res: Response): Promise<void> {
 
 const DeleteTaskSchema = z.object({
   taskId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
 });
 
-/** POST /internal/sync/tasks/delete — app đã soft-delete task. */
+/** POST /internal/sync/tasks/delete — app soft-delete hoặc bỏ gán một user. */
 export async function enqueueTaskDeleteInternal(req: Request, res: Response): Promise<void> {
   try {
     requireInternal(req);
     const body = DeleteTaskSchema.parse(req.body);
+    if (body.userId) {
+      res.status(202).json(await enqueueTaskDelete({ taskId: body.taskId, userId: body.userId }));
+      return;
+    }
     res.status(202).json(await enqueueTaskDeletesForAppTask(body.taskId));
   } catch (err) {
     sendError(res, err, logger);
