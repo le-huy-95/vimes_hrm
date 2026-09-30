@@ -61,5 +61,16 @@ void main() {
         isFalse,
       );
     });
+
+    test('false when currentUserId is empty', () {
+      expect(
+        canShowRemoveMember(
+          groupAdmin: true,
+          currentUserId: '',
+          memberUserId: 'other',
+        ),
+        isFalse,
+      );
+    });
   });
 }
