@@ -16,10 +16,15 @@ import {
   splitGoogleNotes,
 } from "./notes-split.js";
 import { emitGoogleSignals, type GoogleSignal } from "./signals.service.js";
-import { enqueueTaskPush, markJobAuthRequired, markJobDone, markJobRetry } from "./sync.service.js";
+import {
+  enqueueTaskDeletesForAppTask,
+  enqueueTaskPush,
+  markJobAuthRequired,
+  markJobDone,
+  markJobRetry,
+} from "./sync.service.js";
 
 const logger = createLogger("google-sync-service");
-const listTitle = process.env.GOOGLE_TASKS_LIST_TITLE ?? "Manage Teams";
 /** Overlap vài chục giây để không miss biên updatedMin. */
 const OVERLAP_MS = Number(process.env.GOOGLE_TASKS_PULL_OVERLAP_MS ?? 45_000);
 /** Poll gần realtime vừa phải: mặc định 3 phút (tránh đốt quota Google). */
@@ -69,11 +74,7 @@ export async function processTaskPullJob(job: {
     return;
   }
 
-  const preferredGroupId =
-    typeof (job.payload as { preferredGroupId?: unknown })?.preferredGroupId === "string"
-      ? ((job.payload as { preferredGroupId: string }).preferredGroupId)
-      : undefined;
-
+  // preferredGroupId in job payload ignored — native import uses mapped list→group.
   const isFirstPull = !account.tasksSyncCursor;
   const pullStartedAt = new Date();
   try {
@@ -93,14 +94,15 @@ export async function processTaskPullJob(job: {
       logger.info({ userId: job.userId, backfilled }, "first pull — backfill push enqueued");
     }
 
-    const listIds = await resolvePullListIds(tasksApi);
-    if (listIds.length === 0) {
+    const mappedLists = await resolvePullListIds(job.userId);
+    if (mappedLists.length === 0) {
       await scheduleNextPoll(account.id, 0);
       await prismaWrite.userGoogleAccount.update({
         where: { id: account.id },
         data: { tasksLastPullAt: pullStartedAt, tasksSyncCursor: pullStartedAt },
       });
       await markJobDone(job.id);
+      logger.info({ jobId: job.id }, "TASKS_PULL skipped — no mapped lists");
       return;
     }
 
@@ -113,7 +115,7 @@ export async function processTaskPullJob(job: {
     const changedFields: string[] = [];
     const signals: GoogleSignal[] = [];
 
-    for (const listId of listIds) {
+    for (const { listId, groupId: mappedGroupId } of mappedLists) {
       const items = await listAllTasks(tasksApi, listId, updatedMin);
       for (const item of items) {
         if (!item.id) continue;
@@ -148,7 +150,7 @@ export async function processTaskPullJob(job: {
             listId,
             item,
             tasksApi,
-            preferredGroupId,
+            preferredGroupId: mappedGroupId,
           });
           if (!importedId) continue;
           applied += 1;
@@ -173,12 +175,46 @@ export async function processTaskPullJob(job: {
               where: { id: link.id },
               data: { status: "DETACHED", updatedAt: new Date() },
             });
+
+            const local = await prismaRead.task.findUnique({
+              where: { id: taskId },
+              select: { id: true, deletedAt: true, groupId: true },
+            });
+            if (local && !local.deletedAt) {
+              const children = await prismaRead.task.findMany({
+                where: { parentId: taskId, deletedAt: null },
+                select: { id: true },
+              });
+              const toDelete = [taskId, ...children.map((c) => c.id)];
+              const now = new Date();
+              await prismaWrite.$transaction(async (tx) => {
+                for (const id of toDelete) {
+                  await tx.task.update({
+                    where: { id },
+                    data: { deletedAt: now, version: { increment: 1 } },
+                  });
+                  await tx.taskEvent.create({
+                    data: {
+                      taskId: id,
+                      eventType: "TaskDeleted",
+                      actorUserId: job.userId,
+                      actorVia: "google",
+                      payload: { source: "google_tasks_delete", groupId: local.groupId },
+                    },
+                  });
+                }
+              });
+              for (const id of toDelete) {
+                await enqueueTaskDeletesForAppTask(id);
+              }
+            }
+
             applied += 1;
             changedFields.push("deleted");
             signals.push({
               userId: job.userId,
               taskId,
-              kind: "detached",
+              kind: "deleted",
               changedFields: ["deleted"],
             });
           }
@@ -494,27 +530,15 @@ async function applyGoogleCompletion(
   });
 }
 
-/**
- * List cần kéo: "Manage Teams" + My Tasks (@default).
- * User thường tạo task trên My Tasks — trước đây bị bỏ qua hoàn toàn.
- */
+/** Chỉ kéo Google lists đã gắn với group (per-user map). */
 async function resolvePullListIds(
-  tasksApi: ReturnType<typeof google.tasks>,
-): Promise<string[]> {
-  const ids = new Set<string>();
-  const listed = await tasksApi.tasklists.list({ maxResults: 100 });
-  for (const item of listed.data.items ?? []) {
-    if (!item.id) continue;
-    if (item.title === listTitle || item.id === "@default") {
-      ids.add(item.id);
-    }
-  }
-  // Một số tài khoản My Tasks không có title đặc biệt — luôn thử @default
-  ids.add("@default");
-  // Đảm bảo list app tồn tại (tạo nếu thiếu) để push/pull cùng chỗ
-  const app = listed.data.items?.find((i) => i.title === listTitle);
-  if (app?.id) ids.add(app.id);
-  return [...ids];
+  userId: string,
+): Promise<Array<{ listId: string; groupId: string }>> {
+  const maps = await prismaRead.userGroupTasklistMap.findMany({
+    where: { userId },
+    select: { googleTasklistId: true, groupId: true },
+  });
+  return maps.map((m) => ({ listId: m.googleTasklistId, groupId: m.groupId }));
 }
 
 async function listAllTasks(

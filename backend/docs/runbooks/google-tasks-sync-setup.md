@@ -53,5 +53,5 @@ GOOGLE_IOS_CLIENT_ID=...   # nếu iOS
 - User cũ chỉ login bằng `idToken` (không có `serverAuthCode`) → **chưa có** refresh token Tasks; phải login lại sau khi cập nhật app.
 - Thu hồi quyền Google → job/`google_task_links` → `AUTH_REQUIRED`; app vẫn chạy, sync dừng.
 - **Không còn background/client polling** Google Tasks. Kéo Google chỉ khi: login (1 lần), push sau CRUD app, hoặc user bấm Pull/Full trên tab Sync.
-- Import native: `GOOGLE_TASKS_IMPORT_NATIVE=false` để tắt. Task app luôn đẩy vào list `GOOGLE_TASKS_LIST_TITLE` (mặc định "Manage Teams").
+- Import native: `GOOGLE_TASKS_IMPORT_NATIVE=false` để tắt. Mỗi user phải gắn Google Task list ↔ group trên tab Sync. Chưa gắn → không push/pull Tasks cho group đó.
 - Nút Sync thủ công gửi `force: true` để bỏ cooldown.

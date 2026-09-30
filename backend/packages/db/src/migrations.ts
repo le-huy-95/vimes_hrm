@@ -545,4 +545,22 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS starred BOOLEAN NOT NULL DEFAULT fals
 CREATE INDEX IF NOT EXISTS tasks_group_starred_idx ON tasks (group_id, starred) WHERE starred = true;
 `,
   },
+  {
+    id: "017_user_group_tasklist_maps",
+    sql: `
+CREATE TABLE IF NOT EXISTS user_group_tasklist_maps (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  group_id UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  google_tasklist_id TEXT NOT NULL,
+  google_tasklist_title TEXT,
+  created_at TIMESTAMPTZ(6) NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT now(),
+  UNIQUE (user_id, group_id),
+  UNIQUE (user_id, google_tasklist_id)
+);
+CREATE INDEX IF NOT EXISTS user_group_tasklist_maps_user_idx
+  ON user_group_tasklist_maps (user_id);
+`,
+  },
 ];

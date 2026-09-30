@@ -128,11 +128,13 @@ class TaskListItem {
     required this.allowClaim,
     required this.assignees,
     required this.createdAt,
+    this.createdById,
     this.maxAssignees,
     this.description,
     this.dueDate,
     this.parentId,
     this.parentCode,
+    this.starred = false,
   });
 
   final String id;
@@ -144,11 +146,13 @@ class TaskListItem {
   final int? maxAssignees;
   final List<TaskAssigneeBrief> assignees;
   final DateTime createdAt;
+  final String? createdById;
   final String? description;
   /// YYYY-MM-DD or null.
   final String? dueDate;
   final String? parentId;
   final String? parentCode;
+  final bool starred;
 
   bool get isRoot => parentId == null || parentId!.isEmpty;
 
@@ -167,6 +171,8 @@ class TaskListItem {
       dueDate: dueRaw?.toString(),
       parentId: j['parentId'] as String? ?? j['parent_id'] as String?,
       parentCode: j['parentCode'] as String? ?? j['parent_code'] as String?,
+      createdById: j['createdById'] as String? ?? j['created_by_id'] as String?,
+      starred: j['starred'] as bool? ?? false,
       assignees: (j['assignees'] as List<dynamic>? ?? const [])
           .map((e) => TaskAssigneeBrief.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -181,6 +187,8 @@ class TaskListItem {
     List<TaskAssigneeBrief>? assignees,
     String? dueDate,
     bool clearDueDate = false,
+    bool? starred,
+    String? createdById,
   }) {
     return TaskListItem(
       id: id,
@@ -192,10 +200,12 @@ class TaskListItem {
       maxAssignees: maxAssignees,
       assignees: assignees ?? this.assignees,
       createdAt: createdAt,
+      createdById: createdById ?? this.createdById,
       description: description,
       dueDate: clearDueDate ? null : (dueDate ?? this.dueDate),
       parentId: parentId,
       parentCode: parentCode,
+      starred: starred ?? this.starred,
     );
   }
 }
@@ -332,6 +342,7 @@ class SyncStatus {
     required this.linkedTasks,
     required this.recentJobs,
     this.tasksLastPullAt,
+    this.unmappedGroupIds = const [],
   });
 
   final bool googleLinked;
@@ -339,6 +350,7 @@ class SyncStatus {
   final SyncBacklog backlog;
   final int linkedTasks;
   final List<Map<String, dynamic>> recentJobs;
+  final List<String> unmappedGroupIds;
 
   factory SyncStatus.fromJson(Map<String, dynamic> j) => SyncStatus(
         googleLinked: j['googleLinked'] as bool? ?? false,
@@ -352,6 +364,42 @@ class SyncStatus {
         recentJobs: (j['recentJobs'] as List<dynamic>? ?? const [])
             .map((e) => Map<String, dynamic>.from(e as Map))
             .toList(),
+        unmappedGroupIds: (j['unmappedGroupIds'] as List<dynamic>? ?? const [])
+            .map((e) => e.toString())
+            .toList(),
+      );
+}
+
+class GoogleTasklistItem {
+  const GoogleTasklistItem({required this.id, required this.title});
+  final String id;
+  final String title;
+  factory GoogleTasklistItem.fromJson(Map<String, dynamic> j) =>
+      GoogleTasklistItem(
+        id: j['id'] as String,
+        title: j['title'] as String? ?? j['id'] as String,
+      );
+}
+
+class TasklistMapRow {
+  const TasklistMapRow({
+    required this.groupId,
+    required this.groupName,
+    required this.mapped,
+    this.googleTasklistId,
+    this.googleTasklistTitle,
+  });
+  final String groupId;
+  final String groupName;
+  final bool mapped;
+  final String? googleTasklistId;
+  final String? googleTasklistTitle;
+  factory TasklistMapRow.fromJson(Map<String, dynamic> j) => TasklistMapRow(
+        groupId: j['groupId'] as String,
+        groupName: j['groupName'] as String? ?? '',
+        mapped: j['mapped'] as bool? ?? false,
+        googleTasklistId: j['googleTasklistId'] as String?,
+        googleTasklistTitle: j['googleTasklistTitle'] as String?,
       );
 }
 

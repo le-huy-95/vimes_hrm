@@ -1,7 +1,12 @@
 import type { Request, Response } from "express";
 import { AppError, createLogger, requireUser, sendError } from "@manage-teams/lib";
 import { z } from "zod";
-import { AssignTaskSchema, CreateTaskSchema, PatchTaskSchema } from "../_shared/core.schemas.js";
+import {
+  AssignTaskSchema,
+  CreateTaskSchema,
+  PatchTaskSchema,
+  UnassignTaskSchema,
+} from "../_shared/core.schemas.js";
 import * as taskService from "./task.service.js";
 
 const logger = createLogger("core-service");
@@ -20,6 +25,7 @@ export async function createTask(req: Request, res: Response): Promise<void> {
         code: task.code,
         title: task.title,
         status: task.status,
+        createdById: task.createdById,
       },
     });
   } catch (err) {
@@ -115,6 +121,18 @@ export async function assignTask(req: Request, res: Response): Promise<void> {
     const body = AssignTaskSchema.parse(req.body);
     await taskService.assignTask(groupId, code, user.id, body.userId);
     res.status(201).json({ ok: true });
+  } catch (err) {
+    sendError(res, err, logger);
+  }
+}
+
+export async function unassignTask(req: Request, res: Response): Promise<void> {
+  try {
+    const user = await requireUser(req);
+    const { groupId, code } = req.params as { groupId: string; code: string };
+    const body = UnassignTaskSchema.parse(req.body ?? {});
+    const result = await taskService.unassignTask(groupId, code, user.id, body.userId);
+    res.json(result);
   } catch (err) {
     sendError(res, err, logger);
   }

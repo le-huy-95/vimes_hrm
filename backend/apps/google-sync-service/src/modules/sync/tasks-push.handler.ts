@@ -16,9 +16,9 @@ import {
   type TaskPushPayload,
 } from "./sync-fields.js";
 import { markJobAuthRequired, markJobDone, markJobRetry } from "./sync.service.js";
+import { resolveTasklistIdForPush } from "./tasklist-map.service.js";
 
 const logger = createLogger("google-sync-service");
-const listTitle = process.env.GOOGLE_TASKS_LIST_TITLE ?? "Manage Teams";
 
 /**
  * Xử lý 1 job TASKS_PUSH — tạo/cập nhật Google Task.
@@ -85,12 +85,16 @@ export async function processTaskPushJob(job: {
       return;
     }
 
-    const listId = await ensureAppTaskList(tasksApi);
-
     const localTask = await prismaRead.task.findUnique({
       where: { id: job.aggregateId },
-      select: { parentId: true },
+      select: { parentId: true, groupId: true },
     });
+    const listId = await resolveTasklistIdForPush(job.userId, localTask?.groupId ?? null);
+    if (!listId) {
+      await markJobDone(job.id);
+      logger.info({ jobId: job.id }, "TASKS_PUSH skipped — no_tasklist_map");
+      return;
+    }
     let googleParentId: string | undefined;
     if (localTask?.parentId) {
       const parentLink = await prismaRead.googleTaskLink.findUnique({
@@ -236,15 +240,4 @@ async function getTasksClient(
     if (tok.token) setCachedAccessToken(userId, tok.token);
   }
   return google.tasks({ version: "v1", auth: oauth2 });
-}
-
-async function ensureAppTaskList(
-  tasksApi: ReturnType<typeof google.tasks>,
-): Promise<string> {
-  const listed = await tasksApi.tasklists.list({ maxResults: 100 });
-  const found = listed.data.items?.find((i) => i.title === listTitle);
-  if (found?.id) return found.id;
-  const created = await tasksApi.tasklists.insert({ requestBody: { title: listTitle } });
-  if (!created.data.id) throw new Error("Không tạo được danh sách việc trên Google");
-  return created.data.id;
 }

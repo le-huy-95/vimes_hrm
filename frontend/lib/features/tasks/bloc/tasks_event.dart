@@ -118,13 +118,27 @@ class TasksPatchRequested extends TasksEvent {
     this.title,
     this.description,
     this.status,
+    this.starred,
   });
   final String code;
   final String? title;
   final String? description;
   final String? status;
+  final bool? starred;
   @override
-  List<Object?> get props => [code, title, description, status];
+  List<Object?> get props => [code, title, description, status, starred];
+}
+
+class TasksUnassignRequested extends TasksEvent {
+  const TasksUnassignRequested({
+    required this.code,
+    this.userId,
+  });
+  final String code;
+  /// Null = bỏ gán chính mình.
+  final String? userId;
+  @override
+  List<Object?> get props => [code, userId];
 }
 
 class TasksClaimRequested extends TasksEvent {

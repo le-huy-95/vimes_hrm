@@ -49,3 +49,27 @@ class SyncSheetPushRequested extends SyncEvent {
 class SyncSheetPullRequested extends SyncEvent {
   const SyncSheetPullRequested();
 }
+
+class SyncTasklistMapsRefreshRequested extends SyncEvent {
+  const SyncTasklistMapsRefreshRequested();
+}
+
+class SyncTasklistMapSetRequested extends SyncEvent {
+  const SyncTasklistMapSetRequested({
+    required this.groupId,
+    required this.googleTasklistId,
+    this.googleTasklistTitle,
+  });
+  final String groupId;
+  final String googleTasklistId;
+  final String? googleTasklistTitle;
+  @override
+  List<Object?> get props => [groupId, googleTasklistId, googleTasklistTitle];
+}
+
+class SyncTasklistMapClearRequested extends SyncEvent {
+  const SyncTasklistMapClearRequested(this.groupId);
+  final String groupId;
+  @override
+  List<Object?> get props => [groupId];
+}

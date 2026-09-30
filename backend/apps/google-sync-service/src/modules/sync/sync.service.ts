@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { prismaRead, prismaWrite } from "@manage-teams/db";
 import { createLogger } from "@manage-teams/lib";
 import { composePushNotes } from "./notes-split.js";
+import { pickUnmappedGroupIds } from "./tasklist-map.service.js";
 
 const logger = createLogger("google-sync-service");
 const DEBOUNCE_MS = Number(process.env.GOOGLE_TASKS_PUSH_DEBOUNCE_MS ?? 10_000);
@@ -356,12 +357,14 @@ export async function getSyncStatus(userId: string) {
   const account = await prismaRead.userGoogleAccount.findFirst({
     where: { userId, isPrimary: true },
   });
-  const [pending, retry, failed, authRequired, links] = await Promise.all([
+  const [pending, retry, failed, authRequired, links, memberships, maps] = await Promise.all([
     prismaRead.syncJob.count({ where: { userId, status: "PENDING" } }),
     prismaRead.syncJob.count({ where: { userId, status: "RETRY" } }),
     prismaRead.syncJob.count({ where: { userId, status: "FAILED" } }),
     prismaRead.syncJob.count({ where: { userId, status: "AUTH_REQUIRED" } }),
     prismaRead.googleTaskLink.count({ where: { userId, status: "LINKED" } }),
+    prismaRead.groupMember.findMany({ where: { userId, status: "ACTIVE" }, select: { groupId: true } }),
+    prismaRead.userGroupTasklistMap.findMany({ where: { userId }, select: { groupId: true } }),
   ]);
   const recent = await prismaRead.syncJob.findMany({
     where: { userId },
@@ -387,5 +390,9 @@ export async function getSyncStatus(userId: string) {
     backlog: { pending, retry, failed, authRequired },
     linkedTasks: links,
     recentJobs: recent,
+    unmappedGroupIds: pickUnmappedGroupIds(
+      memberships.map((m) => m.groupId),
+      maps.map((m) => m.groupId),
+    ),
   };
 }

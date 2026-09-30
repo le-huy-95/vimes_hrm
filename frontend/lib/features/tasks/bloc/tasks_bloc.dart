@@ -24,6 +24,7 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     on<TasksAssignManyRequested>(_onAssignMany);
     on<TasksDueDateRequested>(_onDueDate);
     on<TasksPatchRequested>(_onPatch);
+    on<TasksUnassignRequested>(_onUnassign);
     on<TasksClaimRequested>(_onClaim);
     on<TasksDeleteRequested>(_onDelete);
     on<TasksFocusRequested>(_onFocus);
@@ -280,7 +281,8 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     if (_groupId == null || prev == null) return;
     if (event.title == null &&
         event.description == null &&
-        event.status == null) {
+        event.status == null &&
+        event.starred == null) {
       return;
     }
     if (event.title != null && event.title!.trim().isEmpty) {
@@ -296,9 +298,33 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
         title: event.title?.trim(),
         description: event.description,
         status: event.status,
+        starred: event.starred,
       );
       final tasks = await _core.listTasks(_groupId!);
       final next = prev.copyWith(tasks: tasks, busy: false);
+      emit(next);
+    } catch (e) {
+      emit(TasksFailure(_msg(e), previous: prev));
+      emit(prev.copyWith(busy: false));
+    }
+  }
+
+  Future<void> _onUnassign(
+    TasksUnassignRequested event,
+    Emitter<TasksState> emit,
+  ) async {
+    final prev = _ready;
+    if (_groupId == null || prev == null) return;
+    emit(prev.copyWith(busy: true));
+    try {
+      await _core.unassignTask(
+        _groupId!,
+        event.code,
+        userId: event.userId,
+      );
+      final tasks = await _core.listTasks(_groupId!);
+      final next = prev.copyWith(tasks: tasks, busy: false);
+      emit(TasksActionSuccess('Đã bỏ gán', ready: next));
       emit(next);
     } catch (e) {
       emit(TasksFailure(_msg(e), previous: prev));

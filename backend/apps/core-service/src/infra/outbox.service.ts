@@ -74,6 +74,25 @@ export async function notifyGoogleTaskDelete(taskId: string): Promise<void> {
   }
 }
 
+/** Xóa bản Google Tasks của một user khi bỏ gán (non-fatal). */
+export async function notifyGoogleTaskDeleteForUser(
+  taskId: string,
+  userId: string,
+): Promise<void> {
+  try {
+    await fetch(`${googleSyncUrl}/internal/sync/tasks/delete`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-internal-token": internalToken,
+      },
+      body: JSON.stringify({ taskId, userId }),
+    });
+  } catch (err) {
+    logger.warn({ err, taskId, userId }, "google sync unassign delete notify failed (non-fatal)");
+  }
+}
+
 /** Enqueue kéo delta Google Tasks sau login (non-fatal). */
 export async function notifyGoogleTaskPull(userId: string, force = false): Promise<void> {
   try {

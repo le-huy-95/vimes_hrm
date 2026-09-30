@@ -6,6 +6,7 @@ import {
   envelope,
   notifyChat,
   notifyGoogleTaskDelete,
+  notifyGoogleTaskDeleteForUser,
   notifyGoogleTaskPush,
 } from "../../infra/outbox.service.js";
 import {
@@ -224,8 +225,10 @@ export async function listTasks(
     maxAssignees: t.maxAssignees,
     allowClaim: t.allowClaim,
     createdAt: t.createdAt,
+    createdById: t.createdById,
     dueDate: formatDue(t.dueDate),
     description: t.description,
+    starred: t.starred,
     parentId: t.parentId,
     parentCode: t.parentId ? (codeById.get(t.parentId) ?? null) : null,
     assignees: t.assignees.map((a) => ({
@@ -349,7 +352,8 @@ export async function patchTask(
     input.title === undefined &&
     input.description === undefined &&
     input.dueDate === undefined &&
-    input.status === undefined
+    input.status === undefined &&
+    input.starred === undefined
   ) {
     throw new AppError("Không có trường nào để cập nhật", "EMPTY_PATCH", 400);
   }
@@ -366,6 +370,7 @@ export async function patchTask(
     if (input.title !== undefined) data.title = input.title;
     if (input.description !== undefined) data.description = input.description;
     if (dueParsed !== undefined) data.dueDate = dueParsed;
+    if (input.starred !== undefined) data.starred = input.starred;
 
     let statusMoved = false;
     if (input.status !== undefined) {
@@ -455,7 +460,62 @@ export async function patchTask(
     status: task.status,
     dueDate: formatDue(task.dueDate),
     description: task.description,
+    starred: task.starred,
   };
+}
+
+export async function unassignTask(
+  groupId: string,
+  code: string,
+  actorId: string,
+  targetUserId?: string,
+) {
+  await requireGroupMember(groupId, actorId);
+  const removeUserId = targetUserId ?? actorId;
+  if (targetUserId) {
+    await requireGroupMember(groupId, targetUserId);
+  }
+
+  const result = await prismaWrite.$transaction(async (tx) => {
+    const task = await tx.task.findUnique({ where: { groupId_code: { groupId, code } } });
+    if (!task || task.deletedAt) throw new AppError("Không tìm thấy", "NOT_FOUND", 404);
+
+    const assignee = await tx.taskAssignee.findUnique({
+      where: { taskId_userId: { taskId: task.id, userId: removeUserId } },
+    });
+    if (!assignee || assignee.status === "REMOVED") {
+      throw new AppError("Người dùng chưa được giao việc", "NOT_ASSIGNEE", 400);
+    }
+
+    await tx.taskAssignee.update({
+      where: { taskId_userId: { taskId: task.id, userId: removeUserId } },
+      data: { status: "REMOVED", completedAt: null, completedSource: null },
+    });
+
+    const activeCount = await tx.taskAssignee.count({
+      where: { taskId: task.id, status: "ACTIVE" },
+    });
+    const data: Prisma.TaskUpdateInput = { version: { increment: 1 } };
+    if (activeCount === 0 && task.status !== "TODO") {
+      data.status = "TODO";
+    }
+    const updated = await tx.task.update({ where: { id: task.id }, data });
+
+    await tx.taskEvent.create({
+      data: {
+        taskId: task.id,
+        eventType: "TaskUnassigned",
+        actorUserId: actorId,
+        actorVia: "user",
+        payload: { userId: removeUserId },
+      },
+    });
+    return { taskId: updated.id, status: updated.status };
+  });
+
+  void notifyGoogleTaskDeleteForUser(result.taskId, removeUserId);
+  await invalidateGroupTaskCaches(groupId, result.taskId);
+  return { ok: true as const, taskId: result.taskId, status: result.status };
 }
 
 export async function claimTask(groupId: string, code: string, userId: string) {
