@@ -32,8 +32,9 @@ export async function getMapForGroup(userId: string, groupId: string) {
 
 export async function resolveTasklistIdForPush(
   userId: string,
-  groupId: string,
+  groupId: string | null | undefined,
 ): Promise<string | null> {
+  if (!groupId) return null;
   const map = await getMapForGroup(userId, groupId);
   return map?.googleTasklistId ?? null;
 }
