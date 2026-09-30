@@ -342,6 +342,7 @@ class SyncStatus {
     required this.linkedTasks,
     required this.recentJobs,
     this.tasksLastPullAt,
+    this.unmappedGroupIds = const [],
   });
 
   final bool googleLinked;
@@ -349,6 +350,7 @@ class SyncStatus {
   final SyncBacklog backlog;
   final int linkedTasks;
   final List<Map<String, dynamic>> recentJobs;
+  final List<String> unmappedGroupIds;
 
   factory SyncStatus.fromJson(Map<String, dynamic> j) => SyncStatus(
         googleLinked: j['googleLinked'] as bool? ?? false,
@@ -362,6 +364,42 @@ class SyncStatus {
         recentJobs: (j['recentJobs'] as List<dynamic>? ?? const [])
             .map((e) => Map<String, dynamic>.from(e as Map))
             .toList(),
+        unmappedGroupIds: (j['unmappedGroupIds'] as List<dynamic>? ?? const [])
+            .map((e) => e.toString())
+            .toList(),
+      );
+}
+
+class GoogleTasklistItem {
+  const GoogleTasklistItem({required this.id, required this.title});
+  final String id;
+  final String title;
+  factory GoogleTasklistItem.fromJson(Map<String, dynamic> j) =>
+      GoogleTasklistItem(
+        id: j['id'] as String,
+        title: j['title'] as String? ?? j['id'] as String,
+      );
+}
+
+class TasklistMapRow {
+  const TasklistMapRow({
+    required this.groupId,
+    required this.groupName,
+    required this.mapped,
+    this.googleTasklistId,
+    this.googleTasklistTitle,
+  });
+  final String groupId;
+  final String groupName;
+  final bool mapped;
+  final String? googleTasklistId;
+  final String? googleTasklistTitle;
+  factory TasklistMapRow.fromJson(Map<String, dynamic> j) => TasklistMapRow(
+        groupId: j['groupId'] as String,
+        groupName: j['groupName'] as String? ?? '',
+        mapped: j['mapped'] as bool? ?? false,
+        googleTasklistId: j['googleTasklistId'] as String?,
+        googleTasklistTitle: j['googleTasklistTitle'] as String?,
       );
 }
 

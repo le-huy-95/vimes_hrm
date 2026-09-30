@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:manage_teams/app/router/app_router.dart';
 import 'package:manage_teams/core/models/api_models.dart';
 import 'package:manage_teams/core/skin/color_skin.dart';
 import 'package:manage_teams/features/home/data/core_repository.dart';
+import 'package:manage_teams/features/sync/bloc/sync_bloc.dart';
+import 'package:manage_teams/features/sync/bloc/sync_state.dart';
 import 'package:manage_teams/features/tasks/bloc/tasks_bloc.dart';
 import 'package:manage_teams/features/tasks/bloc/tasks_event.dart';
 import 'package:manage_teams/features/tasks/bloc/tasks_state.dart';
@@ -70,6 +74,79 @@ class TasksTabPage extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+            BlocBuilder<WorkspaceBloc, WorkspaceState>(
+              buildWhen: (p, n) {
+                final pg = p is WorkspaceReady ? p.selectedGroupId : null;
+                final ng = n is WorkspaceReady ? n.selectedGroupId : null;
+                return pg != ng;
+              },
+              builder: (context, ws) {
+                final groupId =
+                    ws is WorkspaceReady ? ws.selectedGroupId : null;
+                if (groupId == null) return const SizedBox.shrink();
+                return BlocBuilder<SyncBloc, SyncState>(
+                  buildWhen: (p, n) {
+                    final pr = switch (p) {
+                      SyncReady() => p,
+                      SyncFailure(:final previous) => previous,
+                      SyncActionSuccess(:final ready) => ready,
+                      _ => null,
+                    };
+                    final nr = switch (n) {
+                      SyncReady() => n,
+                      SyncFailure(:final previous) => previous,
+                      SyncActionSuccess(:final ready) => ready,
+                      _ => null,
+                    };
+                    return pr?.status.unmappedGroupIds !=
+                            nr?.status.unmappedGroupIds ||
+                        pr?.status.googleLinked != nr?.status.googleLinked;
+                  },
+                  builder: (context, syncState) {
+                    final syncReady = switch (syncState) {
+                      SyncReady() => syncState,
+                      SyncFailure(:final previous) => previous,
+                      SyncActionSuccess(:final ready) => ready,
+                      _ => null,
+                    };
+                    if (syncReady == null || !syncReady.status.googleLinked) {
+                      return const SizedBox.shrink();
+                    }
+                    if (!syncReady.status.unmappedGroupIds.contains(groupId)) {
+                      return const SizedBox.shrink();
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      child: Material(
+                        color: const Color(0xFFFFF3CD),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          child: Row(
+                            children: [
+                              const Expanded(
+                                child: Text(
+                                  'Chưa gắn Google Task list cho nhóm này. Sync sẽ không chạy.',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () =>
+                                    context.go(AppRoutes.sync.path),
+                                child: const Text('Gắn ngay'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),

@@ -292,6 +292,111 @@ class _SyncTabPageState extends State<SyncTabPage> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 16),
+                  AppSectionCard(
+                    title: 'Gắn Google Task list',
+                    child: ready.mapsBusy && ready.tasklistMaps.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8),
+                            child: Center(
+                              child: SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (ready.tasklistMaps.isEmpty)
+                                const Text(
+                                  'Không có nhóm để gắn.',
+                                  style: TextStyle(color: Colors.black54),
+                                ),
+                              for (final row in ready.tasklistMaps) ...[
+                                if (row != ready.tasklistMaps.first)
+                                  const Divider(height: 20),
+                                Text(
+                                  row.groupName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                DropdownButtonFormField<String?>(
+                                  value: row.googleTasklistId,
+                                  isExpanded: true,
+                                  decoration: const InputDecoration(
+                                    isDense: true,
+                                    border: OutlineInputBorder(),
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 10,
+                                    ),
+                                  ),
+                                  items: [
+                                    const DropdownMenuItem<String?>(
+                                      value: null,
+                                      child: Text('Chưa gắn'),
+                                    ),
+                                    for (final list in ready.googleTasklists)
+                                      DropdownMenuItem<String?>(
+                                        value: list.id,
+                                        enabled: !_listUsedByOtherGroup(
+                                          ready.tasklistMaps,
+                                          list.id,
+                                          row.groupId,
+                                        ),
+                                        child: Text(
+                                          list.title.isEmpty
+                                              ? list.id
+                                              : list.title,
+                                        ),
+                                      ),
+                                  ],
+                                  onChanged: ready.mapsBusy
+                                      ? null
+                                      : (id) {
+                                          if (id == null) {
+                                            context.read<SyncBloc>().add(
+                                              SyncTasklistMapClearRequested(
+                                                row.groupId,
+                                              ),
+                                            );
+                                            return;
+                                          }
+                                          String? title;
+                                          for (final l in ready.googleTasklists) {
+                                            if (l.id == id) {
+                                              title = l.title;
+                                              break;
+                                            }
+                                          }
+                                          context.read<SyncBloc>().add(
+                                            SyncTasklistMapSetRequested(
+                                              groupId: row.groupId,
+                                              googleTasklistId: id,
+                                              googleTasklistTitle: title,
+                                            ),
+                                          );
+                                        },
+                                ),
+                                if (!row.mapped)
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      'Chưa gắn — Tasks của nhóm này sẽ không sync Google.',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFFB45309),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ],
+                          ),
+                  ),
                   if (s.backlog.authRequired > 0) ...[
                     const SizedBox(height: 12),
                     _GoogleReauthCard(
@@ -349,6 +454,19 @@ class _SyncTabPageState extends State<SyncTabPage> {
         },
       ),
     );
+  }
+
+  bool _listUsedByOtherGroup(
+    List<TasklistMapRow> maps,
+    String listId,
+    String currentGroupId,
+  ) {
+    for (final m in maps) {
+      if (m.groupId != currentGroupId && m.googleTasklistId == listId) {
+        return true;
+      }
+    }
+    return false;
   }
 
   Widget _pill(String text, {bool danger = false}) {

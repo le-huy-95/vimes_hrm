@@ -16,6 +16,9 @@ class SyncBloc extends Bloc<SyncEvent, SyncState> {
     on<SyncOrgSheetsRefreshRequested>(_onOrgSheetsRefresh);
     on<SyncSheetPushRequested>(_onSheetPush);
     on<SyncSheetPullRequested>(_onSheetPull);
+    on<SyncTasklistMapsRefreshRequested>(_onMapsRefresh);
+    on<SyncTasklistMapSetRequested>(_onMapSet);
+    on<SyncTasklistMapClearRequested>(_onMapClear);
   }
 
   final SyncRepository _sync;
@@ -33,12 +36,14 @@ class SyncBloc extends Bloc<SyncEvent, SyncState> {
     emit(const SyncLoading());
     try {
       final status = await _sync.status();
-      emit(
-        SyncReady(
-          status: status,
-          selectedGroupId: _groupId,
-        ),
+      var ready = SyncReady(
+        status: status,
+        selectedGroupId: _groupId,
       );
+      if (status.googleLinked) {
+        ready = await _loadMapsInto(ready);
+      }
+      emit(ready);
     } catch (e) {
       emit(SyncFailure(_msg(e)));
     }
@@ -61,16 +66,95 @@ class SyncBloc extends Bloc<SyncEvent, SyncState> {
       if (gid != null) {
         sheetStatus = await _sync.getSheetStatus(gid);
       }
-      emit(
-        SyncReady(
-          status: status,
-          selectedGroupId: gid,
-          sheetStatus: sheetStatus,
-        ),
+      var ready = SyncReady(
+        status: status,
+        selectedGroupId: gid,
+        sheetStatus: sheetStatus,
+        tasklistMaps: prev?.tasklistMaps ?? const [],
+        googleTasklists: prev?.googleTasklists ?? const [],
       );
+      if (status.googleLinked) {
+        ready = await _loadMapsInto(ready);
+      }
+      emit(ready);
     } catch (e) {
       emit(SyncFailure(_msg(e), previous: prev));
       if (prev != null) emit(prev.copyWith(busy: false));
+    }
+  }
+
+  Future<SyncReady> _loadMapsInto(SyncReady base) async {
+    try {
+      final maps = await _sync.listTasklistMaps();
+      final lists = await _sync.listGoogleTasklists();
+      return base.copyWith(
+        tasklistMaps: maps.groups,
+        googleTasklists: lists,
+        mapsBusy: false,
+      );
+    } catch (_) {
+      return base.copyWith(mapsBusy: false);
+    }
+  }
+
+  Future<void> _onMapsRefresh(
+    SyncTasklistMapsRefreshRequested event,
+    Emitter<SyncState> emit,
+  ) async {
+    final prev = _ready;
+    if (prev == null || !prev.status.googleLinked) return;
+    emit(prev.copyWith(mapsBusy: true));
+    try {
+      final next = await _loadMapsInto(prev);
+      final status = await _sync.status();
+      emit(next.copyWith(status: status, mapsBusy: false));
+    } catch (e) {
+      emit(SyncFailure(_msg(e), previous: prev));
+      emit(prev.copyWith(mapsBusy: false));
+    }
+  }
+
+  Future<void> _onMapSet(
+    SyncTasklistMapSetRequested event,
+    Emitter<SyncState> emit,
+  ) async {
+    final prev = _ready;
+    if (prev == null) return;
+    emit(prev.copyWith(mapsBusy: true));
+    try {
+      await _sync.putTasklistMap(
+        event.groupId,
+        googleTasklistId: event.googleTasklistId,
+        googleTasklistTitle: event.googleTasklistTitle,
+      );
+      final next = await _loadMapsInto(prev);
+      final status = await _sync.status();
+      final ready = next.copyWith(status: status, mapsBusy: false);
+      emit(SyncActionSuccess('Đã gắn Google list', ready: ready));
+      emit(ready);
+    } catch (e) {
+      emit(SyncFailure(_msg(e), previous: prev));
+      emit(prev.copyWith(mapsBusy: false));
+    }
+  }
+
+  Future<void> _onMapClear(
+    SyncTasklistMapClearRequested event,
+    Emitter<SyncState> emit,
+  ) async {
+    final prev = _ready;
+    if (prev == null) return;
+    emit(prev.copyWith(mapsBusy: true));
+    try {
+      await _sync.deleteTasklistMap(event.groupId);
+      final next = await _loadMapsInto(prev);
+      final status = await _sync.status();
+      final ready = next.copyWith(status: status, mapsBusy: false);
+      emit(SyncActionSuccess('Đã bỏ gắn Google list', ready: ready));
+      emit(ready);
+    } catch (e) {
+      emit(SyncFailure(_msg(e), previous: prev));
+      emit(prev.copyWith(mapsBusy: false));
     }
   }
 
