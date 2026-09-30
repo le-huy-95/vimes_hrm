@@ -23,6 +23,18 @@ syncRoutes.post("/sync/tasks/pull", (req, res) =>
 );
 syncRoutes.post("/sync/tasks/full", (req, res) => void syncController.fullSync(req, res));
 syncRoutes.get("/sync/status", (req, res) => void syncController.syncStatus(req, res));
+syncRoutes.get("/sync/tasklists", (req, res) =>
+  void syncController.listGoogleTasklists(req, res),
+);
+syncRoutes.get("/sync/tasklist-maps", (req, res) =>
+  void syncController.listTasklistMaps(req, res),
+);
+syncRoutes.put("/sync/tasklist-maps/:groupId", (req, res) =>
+  void syncController.putTasklistMap(req, res),
+);
+syncRoutes.delete("/sync/tasklist-maps/:groupId", (req, res) =>
+  void syncController.deleteTasklistMap(req, res),
+);
 syncRoutes.post("/internal/sync/sheets", (req, res) =>
   void syncController.enqueueSheets(req, res),
 );

@@ -26,6 +26,7 @@ import {
 } from "./sheets.handler.js";
 import { replayFailedSyncJobs, syncJobBacklogCounts } from "./dlq.service.js";
 import { getGoogleMetrics, metricsPrometheus } from "./metrics.js";
+import * as tasklistMap from "./tasklist-map.service.js";
 
 const logger = createLogger("google-sync-service");
 const internalToken = process.env.INTERNAL_SERVICE_TOKEN ?? "dev-internal-token";
@@ -284,9 +285,57 @@ export async function dlqReplay(req: Request, res: Response): Promise<void> {
   }
 }
 
-/** GET /metrics — Prometheus text */
-export async function metrics(_req: Request, res: Response): Promise<void> {
+/** GET /sync/tasklists */
+export async function listGoogleTasklists(req: Request, res: Response): Promise<void> {
   try {
+    const user = await requireUser(req);
+    res.json({ tasklists: await tasklistMap.listGoogleTasklists(user.id) });
+  } catch (err) {
+    sendError(res, err, logger);
+  }
+}
+
+/** GET /sync/tasklist-maps */
+export async function listTasklistMaps(req: Request, res: Response): Promise<void> {
+  try {
+    const user = await requireUser(req);
+    res.json(await tasklistMap.listMapsForUser(user.id));
+  } catch (err) {
+    sendError(res, err, logger);
+  }
+}
+
+const PutTasklistMapSchema = z.object({
+  googleTasklistId: z.string().min(1),
+  googleTasklistTitle: z.string().min(1).optional(),
+});
+
+/** PUT /sync/tasklist-maps/:groupId */
+export async function putTasklistMap(req: Request, res: Response): Promise<void> {
+  try {
+    const user = await requireUser(req);
+    const groupId = z.string().uuid().parse(req.params.groupId);
+    const body = PutTasklistMapSchema.parse(req.body);
+    const map = await tasklistMap.upsertMap(user.id, groupId, body.googleTasklistId, body.googleTasklistTitle);
+    res.json({ map });
+  } catch (err) {
+    sendError(res, err, logger);
+  }
+}
+
+/** DELETE /sync/tasklist-maps/:groupId */
+export async function deleteTasklistMap(req: Request, res: Response): Promise<void> {
+  try {
+    const user = await requireUser(req);
+    const groupId = z.string().uuid().parse(req.params.groupId);
+    res.json(await tasklistMap.deleteMap(user.id, groupId));
+  } catch (err) {
+    sendError(res, err, logger);
+  }
+}
+
+/** GET /metrics — Prometheus text */
+export async function metrics(_req: Request, res: Response): Promise<void> {  try {
     const backlog = await syncJobBacklogCounts();
     const extra = {
       sync_jobs_pending: backlog.pending,
