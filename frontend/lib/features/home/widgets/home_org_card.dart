@@ -1,4 +1,3 @@
-import 'package:characters/characters.dart';
 import 'package:flutter/material.dart';
 import 'package:manage_teams/core/skin/color_skin.dart';
 import 'package:manage_teams/shared/widgets/app_button.dart';
@@ -27,19 +26,21 @@ class HomeOrgCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final displayId = orgId.length > 8 ? '${orgId.substring(0, 8)}…' : orgId;
     return AppSectionCard(
-      title: 'Tên tổ chức',
+      title: 'Tổ chức',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               CircleAvatar(
+                radius: 28,
                 backgroundColor: ColorSkin.tealLight,
                 child: Text(
                   orgInitial(orgName),
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     color: ColorSkin.primary,
+                    fontSize: 20,
                   ),
                 ),
               ),
@@ -48,16 +49,24 @@ class HomeOrgCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      orgName,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: ColorSkin.title,
+                    Text.rich(
+                      TextSpan(
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: ColorSkin.title,
+                        ),
+                        children: [
+                          const TextSpan(text: 'Tên tổ chức: '),
+                          TextSpan(
+                            text: orgName.isEmpty ? '—' : orgName,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ],
                       ),
                     ),
+                    const SizedBox(height: 4),
                     Text(
-                      'ID: $displayId',
+                      'id: $displayId',
                       style: const TextStyle(
                         fontSize: 12,
                         color: ColorSkin.subtitle,

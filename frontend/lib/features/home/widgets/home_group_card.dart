@@ -10,6 +10,8 @@ class HomeGroupCard extends StatelessWidget {
     required this.groupName,
     required this.myRole,
     required this.memberCount,
+    required this.hasGroup,
+    required this.busy,
     required this.onLeave,
     required this.onViewMembers,
   });
@@ -17,6 +19,8 @@ class HomeGroupCard extends StatelessWidget {
   final String groupName;
   final String? myRole;
   final int memberCount;
+  final bool hasGroup;
+  final bool busy;
   final VoidCallback onLeave;
   final VoidCallback onViewMembers;
 
@@ -24,23 +28,29 @@ class HomeGroupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppSectionCard(
       title: 'Nhóm đang chọn',
-      trailing: IconButton(
-        icon: const Icon(Icons.logout, color: ColorSkin.subtitle),
-        tooltip: 'Rời nhóm',
-        onPressed: onLeave,
-      ),
+      trailing: hasGroup
+          ? IconButton(
+              icon: const Icon(Icons.logout, color: ColorSkin.subtitle),
+              tooltip: 'Rời nhóm',
+              onPressed: busy ? null : onLeave,
+            )
+          : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            groupName,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: ColorSkin.title,
+          Text.rich(
+            TextSpan(
+              style: const TextStyle(fontSize: 15, color: ColorSkin.title),
+              children: [
+                const TextSpan(text: 'Tên nhóm: '),
+                TextSpan(
+                  text: groupName,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             'Vai trò của tôi: ${roleLabelVi(myRole)} · $memberCount thành viên',
             style: const TextStyle(color: ColorSkin.subtitle, fontSize: 13),
@@ -48,7 +58,7 @@ class HomeGroupCard extends StatelessWidget {
           const SizedBox(height: 12),
           AppButton(
             label: 'Xem thành viên',
-            onPressed: onViewMembers,
+            onPressed: hasGroup ? onViewMembers : null,
             height: 40,
           ),
         ],

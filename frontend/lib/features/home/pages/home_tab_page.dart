@@ -1,10 +1,16 @@
-import 'package:characters/characters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:manage_teams/core/models/api_models.dart';
 import 'package:manage_teams/core/skin/color_skin.dart';
+import 'package:manage_teams/features/auth/bloc/auth_bloc.dart';
+import 'package:manage_teams/features/auth/bloc/auth_state.dart';
 import 'package:manage_teams/features/home/bloc/home_bloc.dart';
 import 'package:manage_teams/features/home/bloc/home_event.dart';
 import 'package:manage_teams/features/home/bloc/home_state.dart';
+import 'package:manage_teams/features/home/widgets/home_group_card.dart';
+import 'package:manage_teams/features/home/widgets/home_members_table.dart';
+import 'package:manage_teams/features/home/widgets/home_org_card.dart';
+import 'package:manage_teams/features/home/widgets/role_label.dart';
 import 'package:manage_teams/features/workspace/bloc/workspace_bloc.dart';
 import 'package:manage_teams/features/workspace/bloc/workspace_event.dart';
 import 'package:manage_teams/features/workspace/bloc/workspace_state.dart';
@@ -13,8 +19,25 @@ import 'package:manage_teams/shared/widgets/app_button.dart';
 import 'package:manage_teams/shared/widgets/app_prompt_dialog.dart';
 import 'package:manage_teams/shared/widgets/app_section_card.dart';
 
-class HomeTabPage extends StatelessWidget {
+class HomeTabPage extends StatefulWidget {
   const HomeTabPage({super.key});
+
+  @override
+  State<HomeTabPage> createState() => _HomeTabPageState();
+}
+
+class _HomeTabPageState extends State<HomeTabPage> {
+  final _membersKey = GlobalKey();
+
+  void _scrollToMembers() {
+    final ctx = _membersKey.currentContext;
+    if (ctx == null) return;
+    Scrollable.ensureVisible(
+      ctx,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,12 +87,15 @@ class HomeTabPage extends StatelessWidget {
                 HomeReady(:final members) => members,
                 HomeFailure(:final members) => members,
                 HomeActionSuccess(:final members) => members,
-                _ => const [],
+                _ => const <GroupMember>[],
               };
               final loading = home is HomeLoading;
               final busy = home is HomeReady && home.busy;
               final orgAdmin = ws.selectedOrg?.isAdmin ?? false;
               final groupAdmin = ws.selectedGroup?.isAdmin ?? false;
+              final auth = context.read<AuthBloc>().state;
+              final currentUserId =
+                  auth is AuthAuthenticated ? auth.user.id : null;
 
               return RefreshIndicator(
                 onRefresh: () async {
@@ -95,7 +121,7 @@ class HomeTabPage extends StatelessWidget {
                         ),
                         if (orgAdmin) ...[
                           AppButton(
-                            label: 'Mời',
+                            label: 'Mời thành viên',
                             onPressed: busy
                                 ? null
                                 : () => _promptInvite(context),
@@ -103,7 +129,7 @@ class HomeTabPage extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           AppButton(
-                            label: '+ Nhóm',
+                            label: '+ Nhóm mới',
                             variant: AppButtonVariant.primary,
                             onPressed: busy
                                 ? null
@@ -114,7 +140,7 @@ class HomeTabPage extends StatelessWidget {
                         if (groupAdmin) ...[
                           const SizedBox(width: 8),
                           AppButton(
-                            label: '+ Member',
+                            label: '+ Thành viên',
                             onPressed: busy
                                 ? null
                                 : () => _promptAddMember(context),
@@ -125,7 +151,7 @@ class HomeTabPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Role của bạn: ${ws.selectedOrg?.role ?? '—'}',
+                      'Vai trò của bạn: ${roleLabelVi(ws.selectedOrg?.role)}',
                       style: const TextStyle(
                         color: ColorSkin.subtitle,
                         fontSize: 13,
@@ -136,58 +162,23 @@ class HomeTabPage extends StatelessWidget {
                       builder: (context, c) {
                         final twoCol = c.maxWidth > 640;
                         final cards = [
-                          AppSectionCard(
-                            title: 'Tổ chức',
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  ws.selectedOrg?.name ?? '—',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 8,
-                                  children: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          _promptCreateOrg(context),
-                                      child: const Text('Tạo org mới'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () => _promptAccept(context),
-                                      child: const Text('Chấp nhận lời mời'),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                          HomeOrgCard(
+                            orgName: ws.selectedOrg?.name ?? '',
+                            orgId: ws.selectedOrg?.id ?? '',
+                            onCreateOrg: () => _promptCreateOrg(context),
+                            onAcceptInvite: () => _promptAccept(context),
                           ),
-                          AppSectionCard(
-                            title: 'Nhóm đang chọn',
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  ws.selectedGroup?.name ?? 'Chưa chọn nhóm',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'myRole: ${ws.selectedGroup?.myRole ?? '—'} · ${members.length} thành viên',
-                                  style: const TextStyle(
-                                    color: ColorSkin.subtitle,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
+                          HomeGroupCard(
+                            groupName:
+                                ws.selectedGroup?.name ?? 'Chưa chọn nhóm',
+                            myRole: ws.selectedGroup?.myRole,
+                            memberCount: members.length,
+                            hasGroup: ws.selectedGroup != null,
+                            busy: busy,
+                            onLeave: () => context.read<HomeBloc>().add(
+                              const HomeLeaveGroupRequested(),
                             ),
+                            onViewMembers: _scrollToMembers,
                           ),
                         ];
                         if (twoCol) {
@@ -210,90 +201,45 @@ class HomeTabPage extends StatelessWidget {
                       },
                     ),
                     const SizedBox(height: 20),
-                    const Text(
-                      'Thành viên nhóm',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                    KeyedSubtree(
+                      key: _membersKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Thành viên nhóm',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          if (loading)
+                            const Padding(
+                              padding: EdgeInsets.all(24),
+                              child: Center(child: CircularProgressIndicator()),
+                            )
+                          else if (members.isEmpty)
+                            const Text(
+                              'Chưa có thành viên hoặc chưa chọn nhóm.',
+                              style: TextStyle(color: ColorSkin.subtitle),
+                            )
+                          else
+                            AppSectionCard(
+                              title: 'Danh sách thành viên',
+                              child: HomeMembersTable(
+                                members: members,
+                                groupAdmin: groupAdmin,
+                                currentUserId: currentUserId,
+                                onRemove: (userId) =>
+                                    context.read<HomeBloc>().add(
+                                      HomeRemoveMemberRequested(userId),
+                                    ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    if (loading)
-                      const Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    else if (members.isEmpty)
-                      const Text(
-                        'Chưa có thành viên hoặc chưa chọn nhóm.',
-                        style: TextStyle(color: ColorSkin.subtitle),
-                      )
-                    else
-                      AppSectionCard(
-                        title: 'Danh sách',
-                        child: Column(
-                          children: [
-                            for (var i = 0; i < members.length; i++) ...[
-                              if (i > 0) const Divider(height: 1),
-                              ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                leading: CircleAvatar(
-                                  backgroundColor: i.isEven
-                                      ? ColorSkin.tealLight
-                                      : ColorSkin.orangeLight,
-                                  child: Text(
-                                    _memberInitial(
-                                      members[i].displayName,
-                                      members[i].email,
-                                    ),
-                                  ),
-                                ),
-                                title: Text(
-                                  (members[i].displayName?.isNotEmpty ?? false)
-                                      ? members[i].displayName!
-                                      : members[i].email,
-                                ),
-                                subtitle: Text(members[i].email),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: ColorSkin.tealLight,
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Text(
-                                        members[i].role,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: ColorSkin.primarySub,
-                                        ),
-                                      ),
-                                    ),
-                                    if (groupAdmin)
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.delete_outline,
-                                          color: ColorSkin.error,
-                                        ),
-                                        onPressed: () =>
-                                            context.read<HomeBloc>().add(
-                                              HomeRemoveMemberRequested(
-                                                members[i].userId,
-                                              ),
-                                            ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
                   ],
                 ),
               );
@@ -304,14 +250,12 @@ class HomeTabPage extends StatelessWidget {
     );
   }
 
-  static String _memberInitial(String? displayName, String email) {
-    final label = (displayName?.isNotEmpty ?? false) ? displayName! : email;
-    if (label.isEmpty) return '?';
-    return label.characters.first.toUpperCase();
-  }
-
   Future<void> _promptCreateOrg(BuildContext context) async {
-    final name = await _prompt(context, title: 'Tạo tổ chức', hint: 'Tên org');
+    final name = await _prompt(
+      context,
+      title: 'Tạo tổ chức',
+      hint: 'Tên tổ chức',
+    );
     if (name == null || name.trim().isEmpty || !context.mounted) return;
     context.read<HomeBloc>().add(HomeCreateOrgRequested(name));
   }
@@ -346,7 +290,7 @@ class HomeTabPage extends StatelessWidget {
     final userId = await _prompt(
       context,
       title: 'Thêm thành viên nhóm',
-      hint: 'userId (UUID)',
+      hint: 'ID người dùng (UUID)',
     );
     if (userId == null || userId.trim().isEmpty || !context.mounted) return;
     context.read<HomeBloc>().add(HomeAddMemberRequested(userId));
