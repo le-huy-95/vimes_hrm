@@ -23,6 +23,7 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     on<TasksAssignRequested>(_onAssign);
     on<TasksAssignManyRequested>(_onAssignMany);
     on<TasksDueDateRequested>(_onDueDate);
+    on<TasksStartDateRequested>(_onStartDate);
     on<TasksPatchRequested>(_onPatch);
     on<TasksUnassignRequested>(_onUnassign);
     on<TasksClaimRequested>(_onClaim);
@@ -264,6 +265,33 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
       final next = prev.copyWith(tasks: tasks, busy: false);
       emit(TasksActionSuccess(
         event.dueDate == null ? 'Đã xóa hạn' : 'Đã đặt hạn',
+        ready: next,
+      ));
+      emit(next);
+    } catch (e) {
+      emit(TasksFailure(_msg(e), previous: prev));
+      emit(prev.copyWith(busy: false));
+    }
+  }
+
+  Future<void> _onStartDate(
+    TasksStartDateRequested event,
+    Emitter<TasksState> emit,
+  ) async {
+    final prev = _ready;
+    if (_groupId == null || prev == null) return;
+    emit(prev.copyWith(busy: true));
+    try {
+      await _core.patchTask(
+        _groupId!,
+        event.code,
+        startDate: event.startDate,
+        clearStartDate: event.startDate == null,
+      );
+      final tasks = await _core.listTasks(_groupId!);
+      final next = prev.copyWith(tasks: tasks, busy: false);
+      emit(TasksActionSuccess(
+        event.startDate == null ? 'Đã xóa ngày bắt đầu' : 'Đã đặt ngày bắt đầu',
         ready: next,
       ));
       emit(next);

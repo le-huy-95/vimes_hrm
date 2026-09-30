@@ -18,11 +18,15 @@ Future<void> showTaskDetailDialog(
   BuildContext context,
   TaskListItem task,
 ) {
-  final bloc = context.read<TasksBloc>();
+  final tasksBloc = context.read<TasksBloc>();
+  final workspaceBloc = context.read<WorkspaceBloc>();
   return showDialog<void>(
     context: context,
-    builder: (ctx) => BlocProvider.value(
-      value: bloc,
+    builder: (ctx) => MultiBlocProvider(
+      providers: [
+        BlocProvider.value(value: tasksBloc),
+        BlocProvider.value(value: workspaceBloc),
+      ],
       child: TaskDetailDialog(taskId: task.id, fallback: task),
     ),
   );
@@ -180,10 +184,13 @@ class _TaskDetailDialogState extends State<TaskDetailDialog> {
           curr is TasksActionSuccess &&
           curr.message == TasksBloc.deleteSuccessMessage,
       listener: (context, state) {
-        Navigator.of(context).pop();
-        SimpleSnackbarService.showSuccess(
-          (state as TasksActionSuccess).message,
-        );
+        final success = state as TasksActionSuccess;
+        SimpleSnackbarService.showSuccess(success.message);
+        final stillPresent =
+            success.ready.tasks.any((t) => t.id == widget.taskId);
+        if (!stillPresent) {
+          Navigator.of(context).pop();
+        }
       },
       child: BlocBuilder<TasksBloc, TasksState>(
       builder: (context, state) {
@@ -267,6 +274,13 @@ class _TaskDetailDialogState extends State<TaskDetailDialog> {
                   ),
                   const SizedBox(height: 16),
                   const Text(
+                    'Ngày bắt đầu',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                  const SizedBox(height: 6),
+                  _StartSection(task: task, ymd: _ymd, parseDue: _parseDue),
+                  const SizedBox(height: 16),
+                  const Text(
                     'Hạn chót',
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                   ),
@@ -311,6 +325,8 @@ class _TaskDetailDialogState extends State<TaskDetailDialog> {
                       parent: task,
                       allTasks: _readyOf(state)?.tasks ?? const [],
                       newSubtaskController: _newSubtask,
+                      canDeleteChild: (child) => _canDelete(context, child),
+                      busy: busy,
                     ),
                   ],
                 ],
@@ -340,11 +356,15 @@ class _SubtasksSection extends StatelessWidget {
     required this.parent,
     required this.allTasks,
     required this.newSubtaskController,
+    required this.canDeleteChild,
+    required this.busy,
   });
 
   final TaskListItem parent;
   final List<TaskListItem> allTasks;
   final TextEditingController newSubtaskController;
+  final bool Function(TaskListItem child) canDeleteChild;
+  final bool busy;
 
   void _addSubtask(BuildContext context) {
     final title = newSubtaskController.text.trim();
@@ -353,6 +373,34 @@ class _SubtasksSection extends StatelessWidget {
       TasksCreateRequested(title, parentCode: parent.code),
     );
     newSubtaskController.clear();
+  }
+
+  Future<void> _confirmDeleteChild(
+    BuildContext context,
+    TaskListItem child,
+  ) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xóa công việc?'),
+        content: Text(
+          'Task ${child.code} sẽ bị xóa. Đồng bộ Google Tasks cũng được gỡ.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Huỷ'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: ColorSkin.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    context.read<TasksBloc>().add(TasksDeleteRequested(child.code));
   }
 
   @override
@@ -382,6 +430,18 @@ class _SubtasksSection extends StatelessWidget {
               },
             ),
             title: Text(c.title),
+            trailing: canDeleteChild(c)
+                ? IconButton(
+                    tooltip: 'Xóa subtask',
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      color: ColorSkin.error,
+                    ),
+                    onPressed: busy
+                        ? null
+                        : () => _confirmDeleteChild(context, c),
+                  )
+                : null,
             onTap: () {
               Navigator.of(context).pop();
               showTaskDetailDialog(context, c);
@@ -406,6 +466,65 @@ class _SubtasksSection extends StatelessWidget {
             ),
           ],
         ),
+      ],
+    );
+  }
+}
+
+class _StartSection extends StatelessWidget {
+  const _StartSection({
+    required this.task,
+    required this.ymd,
+    required this.parseDue,
+  });
+
+  final TaskListItem task;
+  final String Function(DateTime) ymd;
+  final DateTime? Function(String?) parseDue;
+
+  void _set(BuildContext context, String? start) {
+    context.read<TasksBloc>().add(
+      TasksStartDateRequested(code: task.code, startDate: start),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: [
+        ActionChip(
+          label: const Text('Hôm nay'),
+          onPressed: () => _set(context, ymd(today)),
+        ),
+        ActionChip(
+          label: const Text('Ngày mai'),
+          onPressed: () => _set(context, ymd(tomorrow)),
+        ),
+        ActionChip(
+          avatar: const Icon(Icons.event, size: 16),
+          label: Text(task.startDate ?? 'Chọn ngày'),
+          onPressed: () async {
+            final initial = parseDue(task.startDate) ?? today;
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: initial,
+              firstDate: DateTime(2020),
+              lastDate: DateTime(2035),
+            );
+            if (picked == null || !context.mounted) return;
+            _set(context, ymd(picked));
+          },
+        ),
+        if (task.startDate != null)
+          ActionChip(
+            label: const Text('Xóa'),
+            onPressed: () => _set(context, null),
+          ),
       ],
     );
   }

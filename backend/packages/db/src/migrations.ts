@@ -545,4 +545,10 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS starred BOOLEAN NOT NULL DEFAULT fals
 CREATE INDEX IF NOT EXISTS tasks_group_starred_idx ON tasks (group_id, starred) WHERE starred = true;
 `,
   },
+  {
+    id: "018_task_start_date",
+    sql: `
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS start_date DATE;
+`,
+  },
 ];

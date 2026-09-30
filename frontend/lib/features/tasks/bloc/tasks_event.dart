@@ -112,6 +112,18 @@ class TasksDueDateRequested extends TasksEvent {
   List<Object?> get props => [code, dueDate];
 }
 
+class TasksStartDateRequested extends TasksEvent {
+  const TasksStartDateRequested({
+    required this.code,
+    this.startDate,
+  });
+  final String code;
+  /// YYYY-MM-DD, or null to clear.
+  final String? startDate;
+  @override
+  List<Object?> get props => [code, startDate];
+}
+
 class TasksPatchRequested extends TasksEvent {
   const TasksPatchRequested({
     required this.code,
