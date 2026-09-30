@@ -1,6 +1,8 @@
 # Google Chat OAuth Proxy Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **HISTORICAL / SUPERSEDED (2026-09-30).** Do **not** execute remaining unchecked boxes. Much of this plan was already implemented in tree. Further work follows [`docs/superpowers/specs/2026-09-30-google-chat-oauth-gap-close-design.md`](../specs/2026-09-30-google-chat-oauth-gap-close-design.md) and a **new** gap-close implementation plan derived from that spec only.
+
+> **For agentic workers (legacy):** REQUIRED SUB-SKILL was subagent-driven-development / executing-plans. Kept for history only.
 
 **Goal:** Make the Chat tab a Google Chat client scoped to spaces linked to the current group, with login Chat+Sheets scopes, create/assign tasks (Google Tasks sync), and self-leave that also leaves linked Chat spaces.
 
@@ -8,7 +10,8 @@
 
 **Tech Stack:** Express/TS, Prisma, googleapis Chat v1, Vitest, Flutter Bloc/Dio
 
-**Spec:** `docs/superpowers/specs/2026-09-29-google-chat-oauth-proxy-design.md`
+**Spec (original):** `docs/superpowers/specs/2026-09-29-google-chat-oauth-proxy-design.md`  
+**Superseding spec:** `docs/superpowers/specs/2026-09-30-google-chat-oauth-gap-close-design.md`
 
 ---
 
