@@ -60,3 +60,7 @@ class HomeAddMemberRequested extends HomeEvent {
   @override
   List<Object?> get props => [userId, role];
 }
+
+class HomeLeaveGroupRequested extends HomeEvent {
+  const HomeLeaveGroupRequested();
+}
