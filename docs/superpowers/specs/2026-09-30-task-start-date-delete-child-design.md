@@ -39,7 +39,7 @@
 tasks.start_date  DATE NULL   -- calendar date only; API "YYYY-MM-DD"
 ```
 
-- Migration id e.g. `017_task_start_date`: `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS start_date DATE;`
+- Migration id e.g. `018_task_start_date`: `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS start_date DATE;`
 - Prisma `Task.startDate` mapped to `start_date`.
 - `CachedTaskListItem` + all list/get DTO mappers include `startDate` alongside `dueDate`.
 - Clients treat missing `startDate` on stale cache payloads as `null`.
